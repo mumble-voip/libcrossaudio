@@ -3,6 +3,9 @@
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
+// CR krzmbrzl: We shouldn't have two headers with the same name in our source tree
+// I would propose renaming this one to e.g. BackendImpl.h
+
 #ifndef CROSSAUDIO_SRC_BACKEND_H
 #define CROSSAUDIO_SRC_BACKEND_H
 

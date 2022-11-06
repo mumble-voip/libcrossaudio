@@ -1,0 +1,2 @@
+we should not have any uppercase characters in the include path (that seems to be rather unusual in C++)
+Thus, I would suggest renaming the `CrossAudio` dir to `crossaudio`
