@@ -16,7 +16,7 @@ project(libcrossaudio
 	LANGUAGES "C"
 )
 
-option(build-tests "Build tests" ON)
+option(CROSSAUDIO_BUILD_TESTS "Build tests" ON)
 
 include(CTest)
 
@@ -40,6 +40,6 @@ endif()
 
 add_subdirectory(src)
 
-if(build-tests)
+if(CROSSAUDIO_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
