@@ -36,12 +36,12 @@ target_sources(crossaudio
 		"Flux.h"
 		"Macros.h"
 	PUBLIC
-		"${INCLUDE_DIR}/CrossAudio/Backend.h"
-		"${INCLUDE_DIR}/CrossAudio/Channel.h"
-		"${INCLUDE_DIR}/CrossAudio/Direction.h"
-		"${INCLUDE_DIR}/CrossAudio/Engine.h"
-		"${INCLUDE_DIR}/CrossAudio/ErrorCode.h"
-		"${INCLUDE_DIR}/CrossAudio/Flux.h"
+		"${INCLUDE_DIR}/crossaudio/Backend.h"
+		"${INCLUDE_DIR}/crossaudio/Channel.h"
+		"${INCLUDE_DIR}/crossaudio/Direction.h"
+		"${INCLUDE_DIR}/crossaudio/Engine.h"
+		"${INCLUDE_DIR}/crossaudio/ErrorCode.h"
+		"${INCLUDE_DIR}/crossaudio/Flux.h"
 )
 
 add_subdirectory(backends)

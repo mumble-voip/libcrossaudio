@@ -6,7 +6,7 @@
 #ifndef CROSSAUDIO_SRC_ENGINE_H
 #define CROSSAUDIO_SRC_ENGINE_H
 
-#include "CrossAudio/Engine.h"
+#include "crossaudio/Engine.h"
 
 typedef struct CrossAudio_Engine Engine;
 

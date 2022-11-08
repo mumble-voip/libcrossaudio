@@ -8,9 +8,9 @@
 
 #include "Library.h"
 
-#include "CrossAudio/Direction.h"
-#include "CrossAudio/ErrorCode.h"
-#include "CrossAudio/Flux.h"
+#include "crossaudio/Direction.h"
+#include "crossaudio/ErrorCode.h"
+#include "crossaudio/Flux.h"
 
 #include <spa/utils/hook.h>
 

@@ -6,7 +6,7 @@
 #ifndef CROSSAUDIO_SRC_FLUX_H
 #define CROSSAUDIO_SRC_FLUX_H
 
-#include "CrossAudio/Flux.h"
+#include "crossaudio/Flux.h"
 
 typedef struct CrossAudio_Engine Engine;
 typedef struct CrossAudio_Flux Flux;

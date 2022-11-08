@@ -6,8 +6,8 @@
 #ifndef CROSSAUDIO_TESTS_COMMON_H
 #define CROSSAUDIO_TESTS_COMMON_H
 
-#include "CrossAudio/Engine.h"
-#include "CrossAudio/Flux.h"
+#include "crossaudio/Engine.h"
+#include "crossaudio/Flux.h"
 
 #include <stdbool.h>
 #include <stdio.h>

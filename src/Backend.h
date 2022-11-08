@@ -6,9 +6,9 @@
 #ifndef CROSSAUDIO_SRC_BACKEND_H
 #define CROSSAUDIO_SRC_BACKEND_H
 
-#include "CrossAudio/Backend.h"
+#include "crossaudio/Backend.h"
 
-#include "CrossAudio/Direction.h"
+#include "crossaudio/Direction.h"
 
 #include <stddef.h>
 
