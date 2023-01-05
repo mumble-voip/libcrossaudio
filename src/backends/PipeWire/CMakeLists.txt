@@ -13,6 +13,8 @@ target_compile_definitions(be_pipewire
 	PRIVATE
 		# For POSIX.1-2008 locale stuff in <spa/utils/string.h>.
 		"_XOPEN_SOURCE=700"
+	INTERFACE
+		"HAS_PIPEWIRE"
 )
 
 target_compile_options(be_pipewire

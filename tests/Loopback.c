@@ -59,7 +59,7 @@ int main() {
 
 	int ret = 0;
 
-	Flux *streams[2]      = {};
+	Flux *streams[]       = { NULL, NULL };
 	FluxConfig config     = { .direction = CROSSAUDIO_DIR_IN, .channels = CHANNELS, .sampleRate = RATE };
 	FluxFeedback feedback = { .userData = buffer, .process = inProcess };
 

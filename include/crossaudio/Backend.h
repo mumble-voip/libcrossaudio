@@ -7,6 +7,7 @@
 #define CROSSAUDIO_BACKEND_H
 
 #include "ErrorCode.h"
+#include "Macros.h"
 
 #include <stdbool.h>
 
@@ -21,12 +22,12 @@ enum CrossAudio_Backend {
 	CROSSAUDIO_BACKEND_PIPEWIRE
 };
 
-bool CrossAudio_backendExists(enum CrossAudio_Backend backend);
+CROSSAUDIO_EXPORT bool CrossAudio_backendExists(enum CrossAudio_Backend backend);
 
-const char *CrossAudio_backendName(enum CrossAudio_Backend backend);
-const char *CrossAudio_backendVersion(enum CrossAudio_Backend backend);
+CROSSAUDIO_EXPORT const char *CrossAudio_backendName(enum CrossAudio_Backend backend);
+CROSSAUDIO_EXPORT const char *CrossAudio_backendVersion(enum CrossAudio_Backend backend);
 
-enum CrossAudio_ErrorCode CrossAudio_backendInit(enum CrossAudio_Backend backend);
-enum CrossAudio_ErrorCode CrossAudio_backendDeinit(enum CrossAudio_Backend backend);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_backendInit(enum CrossAudio_Backend backend);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_backendDeinit(enum CrossAudio_Backend backend);
 
 #endif

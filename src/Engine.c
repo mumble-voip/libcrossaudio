@@ -6,11 +6,10 @@
 #include "Engine.h"
 
 #include "Backend.h"
-#include "Macros.h"
 
 #include <stdlib.h>
 
-EXPORT Engine *CrossAudio_engineNew(const Backend backend) {
+Engine *CrossAudio_engineNew(const Backend backend) {
 	const BE_Impl *impl = backendGetImpl(backend);
 	if (!impl) {
 		return NULL;
@@ -29,7 +28,7 @@ EXPORT Engine *CrossAudio_engineNew(const Backend backend) {
 	return engine;
 }
 
-EXPORT ErrorCode CrossAudio_engineFree(Engine *engine) {
+ErrorCode CrossAudio_engineFree(Engine *engine) {
 	const ErrorCode ec = engine->beImpl->engineFree(engine->beData);
 	if (ec == CROSSAUDIO_EC_OK) {
 		free(engine);
@@ -38,18 +37,18 @@ EXPORT ErrorCode CrossAudio_engineFree(Engine *engine) {
 	return ec;
 }
 
-EXPORT ErrorCode CrossAudio_engineStart(Engine *engine) {
+ErrorCode CrossAudio_engineStart(Engine *engine) {
 	return engine->beImpl->engineStart(engine->beData);
 }
 
-EXPORT ErrorCode CrossAudio_engineStop(Engine *engine) {
+ErrorCode CrossAudio_engineStop(Engine *engine) {
 	return engine->beImpl->engineStop(engine->beData);
 }
 
-EXPORT const char *CrossAudio_engineNameGet(Engine *engine) {
+const char *CrossAudio_engineNameGet(Engine *engine) {
 	return engine->beImpl->engineNameGet(engine->beData);
 }
 
-EXPORT ErrorCode CrossAudio_engineNameSet(Engine *engine, const char *name) {
+ErrorCode CrossAudio_engineNameSet(Engine *engine, const char *name) {
 	return engine->beImpl->engineNameSet(engine->beData, name);
 }

@@ -74,8 +74,10 @@ static inline const BE_Impl *backendGetImpl(const Backend backend) {
 			// return &JackAudio_Impl;
 		}
 		case CROSSAUDIO_BACKEND_PIPEWIRE: {
+#ifdef HAS_PIPEWIRE
 			extern const BE_Impl PipeWire_Impl;
 			return &PipeWire_Impl;
+#endif
 		}
 	}
 

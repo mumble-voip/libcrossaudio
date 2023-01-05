@@ -7,11 +7,10 @@
 
 #include "Backend.h"
 #include "Engine.h"
-#include "Macros.h"
 
 #include <stdlib.h>
 
-EXPORT Flux *CrossAudio_fluxNew(Engine *engine) {
+Flux *CrossAudio_fluxNew(Engine *engine) {
 	const BE_Impl *impl = engine->beImpl;
 
 	void *data = impl->fluxNew(engine->beData);
@@ -28,7 +27,7 @@ EXPORT Flux *CrossAudio_fluxNew(Engine *engine) {
 	return flux;
 }
 
-EXPORT ErrorCode CrossAudio_fluxFree(Flux *flux) {
+ErrorCode CrossAudio_fluxFree(Flux *flux) {
 	const ErrorCode ec = flux->beImpl->fluxFree(flux->beData);
 	if (ec == CROSSAUDIO_EC_OK) {
 		free(flux);
@@ -37,22 +36,22 @@ EXPORT ErrorCode CrossAudio_fluxFree(Flux *flux) {
 	return ec;
 }
 
-EXPORT Engine *CrossAudio_fluxEngine(Flux *flux) {
+Engine *CrossAudio_fluxEngine(Flux *flux) {
 	return flux->engine;
 }
 
-EXPORT ErrorCode CrossAudio_fluxStart(Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
+ErrorCode CrossAudio_fluxStart(Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
 	return flux->beImpl->fluxStart(flux->beData, config, feedback);
 }
 
-EXPORT ErrorCode CrossAudio_fluxStop(Flux *flux) {
+ErrorCode CrossAudio_fluxStop(Flux *flux) {
 	return flux->beImpl->fluxStop(flux->beData);
 }
 
-EXPORT const char *CrossAudio_fluxNameGet(Flux *flux) {
+const char *CrossAudio_fluxNameGet(Flux *flux) {
 	return flux->beImpl->fluxNameGet(flux->beData);
 }
 
-EXPORT ErrorCode CrossAudio_fluxNameSet(Flux *flux, const char *name) {
+ErrorCode CrossAudio_fluxNameSet(Flux *flux, const char *name) {
 	return flux->beImpl->fluxNameSet(flux->beData, name);
 }

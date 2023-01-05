@@ -6,7 +6,8 @@
 #include "PipeWire.h"
 
 #include "Backend.h"
-#include "Macros.h"
+
+#include "crossaudio/Macros.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +65,7 @@ ErrorCode init() {
 	};
 	// clang-format on
 
-	for (uint8_t i = 0; i < ARRAY_SIZE(names); ++i) {
+	for (uint8_t i = 0; i < CROSSAUDIO_ARRAY_SIZE(names); ++i) {
 		if ((lib.handle = dlopen(names[i], RTLD_LAZY))) {
 			break;
 		}
@@ -135,7 +136,7 @@ BE_Engine *engineNew() {
 		return NULL;
 	}
 
-	BE_Engine *engine = ZERO_ALLOC(sizeof(*engine));
+	BE_Engine *engine = CROSSAUDIO_ZERO_ALLOC(sizeof(*engine));
 	if (!engine) {
 		lib.context_destroy(context);
 		lib.thread_loop_destroy(threadLoop);
@@ -234,7 +235,7 @@ BE_Flux *fluxNew(BE_Engine *engine) {
 		return NULL;
 	}
 
-	BE_Flux *flux = ZERO_ALLOC(sizeof(*flux));
+	BE_Flux *flux = CROSSAUDIO_ZERO_ALLOC(sizeof(*flux));
 	if (!flux) {
 		lib.stream_destroy(stream);
 		goto RET;
@@ -417,7 +418,7 @@ static inline spa_audio_info_raw configToInfo(const FluxConfig *config) {
 	info.format   = SPA_AUDIO_FORMAT_F32;
 	info.rate     = config->sampleRate;
 
-	for (uint8_t i = 0; i < SPA_MIN(config->channels, ARRAY_SIZE(config->position)); ++i) {
+	for (uint8_t i = 0; i < SPA_MIN(config->channels, CROSSAUDIO_ARRAY_SIZE(config->position)); ++i) {
 		spa_audio_channel channel;
 
 		switch (config->position[i]) {

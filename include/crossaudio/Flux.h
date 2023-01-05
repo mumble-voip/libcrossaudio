@@ -9,6 +9,7 @@
 #include "Channel.h"
 #include "Direction.h"
 #include "ErrorCode.h"
+#include "Macros.h"
 
 #include <stdint.h>
 
@@ -33,16 +34,17 @@ struct CrossAudio_FluxFeedback {
 	void (*process)(void *userData, struct CrossAudio_FluxData *data);
 };
 
-struct CrossAudio_Flux *CrossAudio_fluxNew(struct CrossAudio_Engine *engine);
-enum CrossAudio_ErrorCode CrossAudio_fluxFree(struct CrossAudio_Flux *flux);
+CROSSAUDIO_EXPORT struct CrossAudio_Flux *CrossAudio_fluxNew(struct CrossAudio_Engine *engine);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxFree(struct CrossAudio_Flux *flux);
 
-struct CrossAudio_Engine *CrossAudio_fluxEngine(struct CrossAudio_Flux *flux);
+CROSSAUDIO_EXPORT struct CrossAudio_Engine *CrossAudio_fluxEngine(struct CrossAudio_Flux *flux);
 
-enum CrossAudio_ErrorCode CrossAudio_fluxStart(struct CrossAudio_Flux *flux, struct CrossAudio_FluxConfig *config,
-											   const struct CrossAudio_FluxFeedback *feedback);
-enum CrossAudio_ErrorCode CrossAudio_fluxStop(struct CrossAudio_Flux *flux);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxStart(struct CrossAudio_Flux *flux,
+																 struct CrossAudio_FluxConfig *config,
+																 const struct CrossAudio_FluxFeedback *feedback);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxStop(struct CrossAudio_Flux *flux);
 
-const char *CrossAudio_fluxNameGet(struct CrossAudio_Flux *flux);
-enum CrossAudio_ErrorCode CrossAudio_fluxNameSet(struct CrossAudio_Flux *flux, const char *name);
+CROSSAUDIO_EXPORT const char *CrossAudio_fluxNameGet(struct CrossAudio_Flux *flux);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxNameSet(struct CrossAudio_Flux *flux, const char *name);
 
 #endif

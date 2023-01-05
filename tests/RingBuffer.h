@@ -6,7 +6,15 @@
 #ifndef CROSSAUDIO_TESTS_RINGBUFFER_H
 #define CROSSAUDIO_TESTS_RINGBUFFER_H
 
-#include <stdatomic.h>
+#ifdef _MSC_VER
+// From the MSVC toolset's <stdatomic.h>:
+// <stdatomic.h> is not yet supported when compiling as C, but this is planned for a future release.
+#	include <Windows.h>
+#else
+#	define USE_STDATOMIC
+#	include <stdatomic.h>
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +24,11 @@ typedef struct RingBuffer {
 	uint32_t head;
 	uint32_t tail;
 	uint32_t size;
+#ifdef USE_STDATOMIC
 	atomic_uint_fast32_t pending;
+#else
+	volatile uint_fast32_t pending;
+#endif
 } RingBuffer;
 
 static inline RingBuffer *ringBufferNew(const uint32_t size) {
@@ -89,9 +101,11 @@ static inline uint32_t ringBufferRead(RingBuffer *ringBuffer, void *dst, uint32_
 	if (ringBuffer->head == ringBuffer->size) {
 		ringBuffer->head = 0;
 	}
-
+#ifdef USE_STDATOMIC
 	atomic_fetch_sub(&ringBuffer->pending, size);
-
+#else
+	InterlockedAdd((LONG *) &ringBuffer->pending, -size);
+#endif
 	return size;
 }
 
@@ -126,9 +140,11 @@ static inline uint32_t ringBufferWrite(RingBuffer *ringBuffer, const void *src, 
 	if (ringBuffer->tail == ringBuffer->size) {
 		ringBuffer->tail = 0;
 	}
-
+#ifdef USE_STDATOMIC
 	atomic_fetch_add(&ringBuffer->pending, size);
-
+#else
+	InterlockedAdd((LONG *) &ringBuffer->pending, size);
+#endif
 	return size;
 }
 
