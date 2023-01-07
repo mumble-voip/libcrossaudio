@@ -16,6 +16,8 @@ project(libcrossaudio
 
 option(CROSSAUDIO_BUILD_TESTS "Build tests" ON)
 
+option(CROSSAUDIO_STATIC "Build the library as static instead of shared" OFF)
+
 include(CTest)
 
 set(CMAKE_C_EXTENSIONS OFF)

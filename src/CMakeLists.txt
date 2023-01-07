@@ -5,7 +5,11 @@
 
 include(CrossAudioCompiler)
 
-add_library(crossaudio SHARED)
+if(NOT CROSSAUDIO_STATIC)
+	add_library(crossaudio SHARED)
+else()
+	add_library(crossaudio STATIC)
+endif()
 
 target_pedantic_warnings(crossaudio)
 
