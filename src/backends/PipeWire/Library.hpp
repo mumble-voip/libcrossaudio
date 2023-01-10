@@ -3,30 +3,30 @@
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
-#ifndef CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_LIBRARY_H
-#define CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_LIBRARY_H
+#ifndef CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_LIBRARY_HPP
+#define CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_LIBRARY_HPP
 
-#include <stddef.h>
-#include <stdint.h>
+#include "crossaudio/ErrorCode.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <string_view>
 
 #include <pipewire/stream.h>
 
-typedef enum pw_stream_state pw_stream_state;
+using ErrorCode = CrossAudio_ErrorCode;
 
-typedef struct spa_dict spa_dict;
-typedef struct spa_hook spa_hook;
-typedef struct spa_pod spa_pod;
+struct pw_thread_loop;
 
-typedef struct pw_buffer pw_buffer;
-typedef struct pw_context pw_context;
-typedef struct pw_core pw_core;
-typedef struct pw_loop pw_loop;
-typedef struct pw_properties pw_properties;
-typedef struct pw_stream pw_stream;
-typedef struct pw_stream_events pw_stream_events;
-typedef struct pw_thread_loop pw_thread_loop;
+struct Library {
+	Library();
+	~Library();
 
-typedef struct Library {
+	explicit operator bool() const { return handle != nullptr; }
+
+	ErrorCode load(const std::string_view libraryName);
+	void unload();
+
 	void *handle;
 
 	const char *(*get_library_version)();
@@ -65,6 +65,10 @@ typedef struct Library {
 	int (*thread_loop_start)(pw_thread_loop *loop);
 	int (*thread_loop_stop)(pw_thread_loop *loop);
 	pw_loop *(*thread_loop_get_loop)(pw_thread_loop *loop);
-} Library;
+
+private:
+	Library(const Library &)            = delete;
+	Library &operator=(const Library &) = delete;
+};
 
 #endif

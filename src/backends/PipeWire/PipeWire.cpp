@@ -3,16 +3,9 @@
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
-#include "PipeWire.h"
-
-#include "Backend.h"
+#include "PipeWire.hpp"
 
 #include "crossaudio/Macros.h"
-
-#include <stdlib.h>
-#include <string.h>
-
-#include <dlfcn.h>
 
 #include <spa/param/audio/format-utils.h>
 #include <spa/pod/builder.h>
@@ -21,17 +14,6 @@
 #include <pipewire/core.h>
 #include <pipewire/keys.h>
 #include <pipewire/stream.h>
-
-#define LOAD_SYM(var)                                    \
-	*(void **) &lib.var = dlsym(lib.handle, "pw_" #var); \
-	if (!lib.var) {                                      \
-		UNLOAD_LIB                                       \
-		return CROSSAUDIO_EC_SYMBOL;                     \
-	}
-
-#define UNLOAD_LIB       \
-	dlclose(lib.handle); \
-	memset(&lib, 0, sizeof(lib));
 
 typedef struct CrossAudio_FluxData FluxData;
 
@@ -42,8 +24,30 @@ typedef struct spa_data spa_data;
 typedef struct spa_dict_item spa_dict_item;
 typedef struct spa_pod_builder spa_pod_builder;
 
-static const pw_stream_events eventsInput  = { .version = PW_VERSION_STREAM_EVENTS, .process = processInput };
-static const pw_stream_events eventsOutput = { .version = PW_VERSION_STREAM_EVENTS, .process = processOutput };
+static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   processInput,
+												   nullptr,
+												   nullptr,
+												   nullptr };
+static constexpr pw_stream_events eventsOutput = { PW_VERSION_STREAM_EVENTS,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   processOutput,
+												   nullptr,
+												   nullptr,
+												   nullptr };
 
 static Library lib;
 
@@ -57,7 +61,7 @@ const char *version() {
 
 ErrorCode init() {
 	// clang-format off
-	const char *names[] = {
+	constexpr std::string_view names[] = {
 		"libpipewire.so",
 		"libpipewire.so.0",
 		"libpipewire-0.3.so",
@@ -65,61 +69,24 @@ ErrorCode init() {
 	};
 	// clang-format on
 
-	for (uint8_t i = 0; i < CROSSAUDIO_ARRAY_SIZE(names); ++i) {
-		if ((lib.handle = dlopen(names[i], RTLD_LAZY))) {
+	ErrorCode ret;
+
+	for (const auto name : names) {
+		if ((ret = lib.load(name)) != CROSSAUDIO_EC_LIBRARY) {
 			break;
 		}
 	}
 
-	if (!lib.handle) {
-		return CROSSAUDIO_EC_LIBRARY;
+	if (lib) {
+		lib.init(NULL, NULL);
 	}
 
-	LOAD_SYM(get_library_version)
-
-	LOAD_SYM(init)
-	LOAD_SYM(deinit)
-
-	LOAD_SYM(context_new)
-	LOAD_SYM(context_destroy)
-	LOAD_SYM(context_connect)
-	LOAD_SYM(context_get_properties)
-	LOAD_SYM(context_update_properties)
-
-	LOAD_SYM(core_disconnect)
-	LOAD_SYM(core_get_properties)
-	LOAD_SYM(core_update_properties)
-
-	LOAD_SYM(properties_get)
-
-	LOAD_SYM(stream_new)
-	LOAD_SYM(stream_destroy)
-	LOAD_SYM(stream_connect)
-	LOAD_SYM(stream_disconnect)
-	LOAD_SYM(stream_dequeue_buffer)
-	LOAD_SYM(stream_queue_buffer)
-	LOAD_SYM(stream_get_properties)
-	LOAD_SYM(stream_update_properties)
-	LOAD_SYM(stream_get_state)
-	LOAD_SYM(stream_add_listener)
-
-	LOAD_SYM(thread_loop_new)
-	LOAD_SYM(thread_loop_destroy)
-	LOAD_SYM(thread_loop_lock)
-	LOAD_SYM(thread_loop_unlock)
-	LOAD_SYM(thread_loop_start)
-	LOAD_SYM(thread_loop_stop)
-	LOAD_SYM(thread_loop_get_loop)
-
-	lib.init(NULL, NULL);
-
-	return CROSSAUDIO_EC_OK;
+	return ret;
 }
 
 ErrorCode deinit() {
 	lib.deinit();
-
-	UNLOAD_LIB
+	lib.unload();
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -136,12 +103,7 @@ BE_Engine *engineNew() {
 		return NULL;
 	}
 
-	BE_Engine *engine = CROSSAUDIO_ZERO_ALLOC(sizeof(*engine));
-	if (!engine) {
-		lib.context_destroy(context);
-		lib.thread_loop_destroy(threadLoop);
-		return NULL;
-	}
+	auto engine = new BE_Engine();
 
 	engine->threadLoop = threadLoop;
 	engine->context    = context;
@@ -156,7 +118,7 @@ ErrorCode engineFree(BE_Engine *engine) {
 
 	lib.thread_loop_destroy(engine->threadLoop);
 
-	free(engine);
+	delete engine;
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -204,7 +166,7 @@ const char *engineNameGet(BE_Engine *engine) {
 }
 
 ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
-	const spa_dict_item items[] = { SPA_DICT_ITEM_INIT(PW_KEY_APP_NAME, name) };
+	const spa_dict_item items[] = { { PW_KEY_APP_NAME, name } };
 	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
 
 	engineLock(engine);
@@ -228,23 +190,17 @@ BE_Flux *fluxNew(BE_Engine *engine) {
 	}
 
 	engineLock(engine);
-
 	pw_stream *stream = lib.stream_new(engine->core, NULL, NULL);
+	engineUnlock(engine);
+
 	if (!stream) {
-		engineUnlock(engine);
 		return NULL;
 	}
 
-	BE_Flux *flux = CROSSAUDIO_ZERO_ALLOC(sizeof(*flux));
-	if (!flux) {
-		lib.stream_destroy(stream);
-		goto RET;
-	}
+	auto flux = new BE_Flux();
 
 	flux->engine = engine;
 	flux->stream = stream;
-RET:
-	engineUnlock(engine);
 
 	return flux;
 }
@@ -254,7 +210,7 @@ ErrorCode fluxFree(BE_Flux *flux) {
 	lib.stream_destroy(flux->stream);
 	engineUnlock(flux->engine);
 
-	free(flux);
+	delete flux;
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -289,13 +245,14 @@ ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedb
 	spa_pod_builder b     = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
 	const spa_pod *params = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
 
-	const spa_dict_item items[] = { SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_TYPE, "Audio"),
-									SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_CATEGORY,
-													   direction == PW_DIRECTION_INPUT ? "Capture" : "Playback") };
+	const spa_dict_item items[] = { { PW_KEY_MEDIA_TYPE, "Audio" },
+									{ PW_KEY_MEDIA_CATEGORY,
+									  direction == PW_DIRECTION_INPUT ? "Capture" : "Playback" } };
+	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
 
 	engineLock(flux->engine);
 
-	lib.stream_update_properties(flux->stream, &SPA_DICT_INIT_ARRAY(items));
+	lib.stream_update_properties(flux->stream, &dict);
 	lib.stream_add_listener(flux->stream, &flux->listener,
 							direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput, flux);
 	lib.stream_connect(flux->stream, direction, PW_ID_ANY,
@@ -327,17 +284,18 @@ const char *fluxNameGet(BE_Flux *flux) {
 }
 
 ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
-	const spa_dict_item items[] = { SPA_DICT_ITEM_INIT(PW_KEY_NODE_NAME, name) };
+	const spa_dict_item items[] = { { PW_KEY_NODE_NAME, name } };
+	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
 
 	engineLock(flux->engine);
-	const int ret = lib.stream_update_properties(flux->stream, &SPA_DICT_INIT_ARRAY(items));
+	const int ret = lib.stream_update_properties(flux->stream, &dict);
 	engineUnlock(flux->engine);
 
 	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
 
 // clang-format off
-const BE_Impl PipeWire_Impl = {
+constexpr BE_Impl PipeWire_Impl = {
 	name,
 	version,
 
@@ -369,9 +327,9 @@ static inline void engineUnlock(BE_Engine *engine) {
 }
 
 static void processInput(void *userData) {
-	BE_Flux *flux = userData;
+	auto &flux = *static_cast< BE_Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux->stream);
+	pw_buffer *buf = lib.stream_dequeue_buffer(flux.stream);
 	if (!buf) {
 		return;
 	}
@@ -381,17 +339,17 @@ static void processInput(void *userData) {
 		return;
 	}
 
-	FluxData fluxData = { .data = data->data, .frames = data->chunk->size / data->chunk->stride };
+	FluxData fluxData = { data->data, data->chunk->size / data->chunk->stride };
 
-	flux->feedback.process(flux->feedback.userData, &fluxData);
+	flux.feedback.process(flux.feedback.userData, &fluxData);
 
-	lib.stream_queue_buffer(flux->stream, buf);
+	lib.stream_queue_buffer(flux.stream, buf);
 }
 
 static void processOutput(void *userData) {
-	BE_Flux *flux = userData;
+	auto &flux = *static_cast< BE_Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux->stream);
+	pw_buffer *buf = lib.stream_dequeue_buffer(flux.stream);
 	if (!buf) {
 		return;
 	}
@@ -401,14 +359,14 @@ static void processOutput(void *userData) {
 		return;
 	}
 
-	FluxData fluxData = { .data = data->data, .frames = data->maxsize / flux->frameSize };
+	FluxData fluxData = { data->data, data->maxsize / flux.frameSize };
 
-	flux->feedback.process(flux->feedback.userData, &fluxData);
+	flux.feedback.process(flux.feedback.userData, &fluxData);
 
-	data->chunk->size   = fluxData.frames * flux->frameSize;
-	data->chunk->stride = flux->frameSize;
+	data->chunk->size   = fluxData.frames * flux.frameSize;
+	data->chunk->stride = flux.frameSize;
 
-	lib.stream_queue_buffer(flux->stream, buf);
+	lib.stream_queue_buffer(flux.stream, buf);
 }
 
 static inline spa_audio_info_raw configToInfo(const FluxConfig *config) {

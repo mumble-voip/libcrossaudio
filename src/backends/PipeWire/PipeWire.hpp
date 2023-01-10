@@ -3,10 +3,12 @@
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
-#ifndef CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_H
-#define CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_H
+#ifndef CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_HPP
+#define CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_HPP
 
-#include "Library.h"
+#include "Library.hpp"
+
+#include "Backend.h"
 
 #include "crossaudio/Direction.h"
 #include "crossaudio/ErrorCode.h"
@@ -14,28 +16,42 @@
 
 #include <spa/utils/hook.h>
 
-typedef enum CrossAudio_ErrorCode ErrorCode;
+using FluxConfig   = CrossAudio_FluxConfig;
+using FluxFeedback = CrossAudio_FluxFeedback;
 
-typedef struct CrossAudio_FluxConfig FluxConfig;
-typedef struct CrossAudio_FluxFeedback FluxFeedback;
+struct spa_audio_info_raw;
 
-typedef struct spa_audio_info_raw spa_audio_info_raw;
+struct BE_Engine {
+	BE_Engine()  = default;
+	~BE_Engine() = default;
 
-typedef struct BE_Engine {
 	pw_thread_loop *threadLoop;
 	pw_context *context;
 	pw_core *core;
-} BE_Engine;
 
-typedef struct BE_Flux {
+private:
+	BE_Engine(const BE_Engine &)            = delete;
+	BE_Engine &operator=(const BE_Engine &) = delete;
+};
+
+struct BE_Flux {
+	BE_Flux()  = default;
+	~BE_Flux() = default;
+
 	BE_Engine *engine;
 	FluxFeedback feedback;
 	spa_hook listener;
 	pw_stream *stream;
 	uint32_t frameSize;
-} BE_Flux;
+
+private:
+	BE_Flux(const BE_Flux &)            = delete;
+	BE_Flux &operator=(const BE_Flux &) = delete;
+};
 
 // Backend API
+
+extern const BE_Impl PipeWire_Impl;
 
 static const char *name();
 static const char *version();

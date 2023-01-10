@@ -17,25 +17,21 @@ target_compile_definitions(be_pipewire
 		"HAS_PIPEWIRE"
 )
 
-target_compile_options(be_pipewire
-	PRIVATE
-		# The following warnings are disabled as they're caused by PipeWire's headers.
-		"-Wno-gnu-empty-initializer"
-		"-Wno-gnu-statement-expression"
-		"-Wno-gnu-zero-variadic-macro-arguments"
-)
-
 target_include_directories(be_pipewire
 	PRIVATE
 		${SRC_DIR}
 		${INCLUDE_DIR}
+)
 
+target_include_directories(be_pipewire
+	SYSTEM PRIVATE
 		"${3RDPARTY_DIR}/PipeWire"
 )
 
 target_sources(be_pipewire
 	PRIVATE
-		"Library.h"
-		"PipeWire.c"
-		"PipeWire.h"
+		"Library.cpp"
+		"Library.hpp"
+		"PipeWire.cpp"
+		"PipeWire.hpp"
 )
