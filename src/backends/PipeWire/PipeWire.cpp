@@ -7,6 +7,8 @@
 
 #include "crossaudio/Macros.h"
 
+#include <memory>
+
 #include <spa/param/audio/format-utils.h>
 #include <spa/pod/builder.h>
 #include <spa/utils/dict.h>
@@ -15,14 +17,7 @@
 #include <pipewire/keys.h>
 #include <pipewire/stream.h>
 
-typedef struct CrossAudio_FluxData FluxData;
-
-typedef enum spa_audio_channel spa_audio_channel;
-typedef enum spa_direction pw_direction;
-
-typedef struct spa_data spa_data;
-typedef struct spa_dict_item spa_dict_item;
-typedef struct spa_pod_builder spa_pod_builder;
+using FluxData = CrossAudio_FluxData;
 
 static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,
 												   nullptr,
@@ -78,7 +73,7 @@ ErrorCode init() {
 	}
 
 	if (lib) {
-		lib.init(NULL, NULL);
+		lib.init(nullptr, nullptr);
 	}
 
 	return ret;
@@ -92,206 +87,71 @@ ErrorCode deinit() {
 }
 
 BE_Engine *engineNew() {
-	pw_thread_loop *threadLoop = lib.thread_loop_new(NULL, NULL);
-	if (!threadLoop) {
-		return NULL;
+	if (auto engine = new BE_Engine()) {
+		if (*engine) {
+			return engine;
+		}
+
+		delete engine;
 	}
 
-	pw_context *context = lib.context_new(lib.thread_loop_get_loop(threadLoop), NULL, 0);
-	if (!context) {
-		lib.thread_loop_destroy(threadLoop);
-		return NULL;
-	}
-
-	auto engine = new BE_Engine();
-
-	engine->threadLoop = threadLoop;
-	engine->context    = context;
-
-	return engine;
+	return nullptr;
 }
 
 ErrorCode engineFree(BE_Engine *engine) {
-	engineLock(engine);
-	lib.context_destroy(engine->context);
-	engineUnlock(engine);
-
-	lib.thread_loop_destroy(engine->threadLoop);
-
 	delete engine;
 
 	return CROSSAUDIO_EC_OK;
 }
 
 ErrorCode engineStart(BE_Engine *engine) {
-	if (engine->core) {
-		return CROSSAUDIO_EC_INIT;
-	}
-
-	pw_core *core = lib.context_connect(engine->context, NULL, 0);
-	if (!core) {
-		return CROSSAUDIO_EC_CONNECT;
-	}
-
-	if (lib.thread_loop_start(engine->threadLoop) < 0) {
-		lib.core_disconnect(core);
-		return CROSSAUDIO_EC_GENERIC;
-	}
-
-	engine->core = core;
-
-	return CROSSAUDIO_EC_OK;
+	return engine->start();
 }
 
 ErrorCode engineStop(BE_Engine *engine) {
-	if (engine->core) {
-		engineLock(engine);
-		lib.core_disconnect(engine->core);
-		engineUnlock(engine);
-
-		engine->core = NULL;
-	}
-
-	return lib.thread_loop_stop(engine->threadLoop) >= 0 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+	return engine->stop();
 }
 
 const char *engineNameGet(BE_Engine *engine) {
-	const pw_properties *props =
-		engine->core ? lib.core_get_properties(engine->core) : lib.context_get_properties(engine->context);
-	if (!props) {
-		return NULL;
-	}
-
-	return lib.properties_get(props, PW_KEY_APP_NAME);
+	return engine->nameGet();
 }
 
 ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
-	const spa_dict_item items[] = { { PW_KEY_APP_NAME, name } };
-	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
-
-	engineLock(engine);
-	int ret = lib.context_update_properties(engine->context, &dict);
-	if (ret < 1) {
-		goto RET;
-	}
-
-	if (engine->core) {
-		ret = lib.core_update_properties(engine->core, &dict);
-	}
-RET:
-	engineUnlock(engine);
-
-	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+	return engine->nameSet(name);
 }
 
 BE_Flux *fluxNew(BE_Engine *engine) {
-	if (!engine->core) {
-		return NULL;
+	if (auto flux = new BE_Flux(*engine)) {
+		if (*flux) {
+			return flux;
+		}
+
+		delete flux;
 	}
 
-	engineLock(engine);
-	pw_stream *stream = lib.stream_new(engine->core, NULL, NULL);
-	engineUnlock(engine);
-
-	if (!stream) {
-		return NULL;
-	}
-
-	auto flux = new BE_Flux();
-
-	flux->engine = engine;
-	flux->stream = stream;
-
-	return flux;
+	return nullptr;
 }
 
 ErrorCode fluxFree(BE_Flux *flux) {
-	engineLock(flux->engine);
-	lib.stream_destroy(flux->stream);
-	engineUnlock(flux->engine);
-
 	delete flux;
 
 	return CROSSAUDIO_EC_OK;
 }
 
 ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
-	if (lib.stream_get_state(flux->stream, NULL) != PW_STREAM_STATE_UNCONNECTED) {
-		return CROSSAUDIO_EC_INIT;
-	}
-
-	if (feedback) {
-		flux->feedback = *feedback;
-	}
-
-	pw_direction direction;
-
-	switch (config->direction) {
-		case CROSSAUDIO_DIR_IN:
-			direction = PW_DIRECTION_INPUT;
-			break;
-		case CROSSAUDIO_DIR_OUT:
-			direction = PW_DIRECTION_OUTPUT;
-			break;
-		default:
-			return CROSSAUDIO_EC_GENERIC;
-	}
-
-	flux->frameSize = sizeof(float) * config->channels;
-
-	spa_audio_info_raw info = configToInfo(config);
-
-	uint8_t buffer[1024];
-	spa_pod_builder b     = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
-	const spa_pod *params = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
-
-	const spa_dict_item items[] = { { PW_KEY_MEDIA_TYPE, "Audio" },
-									{ PW_KEY_MEDIA_CATEGORY,
-									  direction == PW_DIRECTION_INPUT ? "Capture" : "Playback" } };
-	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
-
-	engineLock(flux->engine);
-
-	lib.stream_update_properties(flux->stream, &dict);
-	lib.stream_add_listener(flux->stream, &flux->listener,
-							direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput, flux);
-	lib.stream_connect(flux->stream, direction, PW_ID_ANY,
-					   PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS, &params, 1);
-
-	engineUnlock(flux->engine);
-
-	return CROSSAUDIO_EC_OK;
+	return flux->start(*config, feedback ? *feedback : FluxFeedback());
 }
 
 ErrorCode fluxStop(BE_Flux *flux) {
-	engineLock(flux->engine);
-
-	lib.stream_disconnect(flux->stream);
-	spa_hook_remove(&flux->listener);
-
-	engineUnlock(flux->engine);
-
-	return CROSSAUDIO_EC_OK;
+	return flux->stop();
 }
 
 const char *fluxNameGet(BE_Flux *flux) {
-	const pw_properties *props = lib.stream_get_properties(flux->stream);
-	if (!props) {
-		return NULL;
-	}
-
-	return lib.properties_get(props, PW_KEY_NODE_NAME);
+	return flux->nameGet();
 }
 
 ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
-	const spa_dict_item items[] = { { PW_KEY_NODE_NAME, name } };
-	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
-
-	engineLock(flux->engine);
-	const int ret = lib.stream_update_properties(flux->stream, &dict);
-	engineUnlock(flux->engine);
-
-	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+	return flux->nameSet(name);
 }
 
 // clang-format off
@@ -318,18 +178,174 @@ constexpr BE_Impl PipeWire_Impl = {
 };
 // clang-format on
 
-static inline void engineLock(BE_Engine *engine) {
-	lib.thread_loop_lock(engine->threadLoop);
+BE_Engine::BE_Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
+	if ((m_threadLoop = lib.thread_loop_new(nullptr, nullptr))) {
+		m_context = lib.context_new(lib.thread_loop_get_loop(m_threadLoop), nullptr, 0);
+	}
 }
 
-static inline void engineUnlock(BE_Engine *engine) {
-	lib.thread_loop_unlock(engine->threadLoop);
+BE_Engine::~BE_Engine() {
+	if (m_context) {
+		const auto lock = locker();
+		lib.context_destroy(m_context);
+	}
+
+	if (m_threadLoop) {
+		lib.thread_loop_destroy(m_threadLoop);
+	}
+}
+
+void BE_Engine::lock() {
+	if (m_threadLoop) {
+		lib.thread_loop_lock(m_threadLoop);
+	}
+}
+
+void BE_Engine::unlock() {
+	if (m_threadLoop) {
+		lib.thread_loop_unlock(m_threadLoop);
+	}
+}
+
+ErrorCode BE_Engine::start() {
+	if (m_core) {
+		return CROSSAUDIO_EC_INIT;
+	}
+
+	if (m_core = lib.context_connect(m_context, nullptr, 0); !m_core) {
+		return CROSSAUDIO_EC_CONNECT;
+	}
+
+	if (lib.thread_loop_start(m_threadLoop) < 0) {
+		lib.core_disconnect(m_core);
+		m_core = nullptr;
+
+		return CROSSAUDIO_EC_GENERIC;
+	}
+
+	return CROSSAUDIO_EC_OK;
+}
+
+ErrorCode BE_Engine::stop() {
+	if (m_core) {
+		const auto lock = locker();
+		lib.core_disconnect(m_core);
+		m_core = nullptr;
+	}
+
+	return lib.thread_loop_stop(m_threadLoop) >= 0 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+}
+
+const char *BE_Engine::nameGet() const {
+	if (const auto props = m_core ? lib.core_get_properties(m_core) : lib.context_get_properties(m_context)) {
+		return lib.properties_get(props, PW_KEY_APP_NAME);
+	}
+
+	return nullptr;
+}
+
+ErrorCode BE_Engine::nameSet(const char *name) {
+	const spa_dict_item items[] = { { PW_KEY_APP_NAME, name } };
+	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
+
+	const auto lock = locker();
+
+	auto ret = lib.context_update_properties(m_context, &dict);
+	if (ret >= 1 && m_core) {
+		ret = lib.core_update_properties(m_core, &dict);
+	}
+
+	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+}
+
+BE_Flux::BE_Flux(BE_Engine &engine) : m_engine(engine), m_stream(nullptr), m_frameSize(0) {
+	if (engine.m_core) {
+		const auto lock = engine.locker();
+		m_stream        = lib.stream_new(engine.m_core, nullptr, nullptr);
+	}
+}
+
+BE_Flux::~BE_Flux() {
+	if (m_stream) {
+		const auto lock = m_engine.locker();
+		lib.stream_destroy(m_stream);
+	}
+}
+
+ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
+	if (lib.stream_get_state(m_stream, nullptr) != PW_STREAM_STATE_UNCONNECTED) {
+		return CROSSAUDIO_EC_INIT;
+	}
+
+	m_feedback = feedback;
+
+	pw_direction direction;
+
+	switch (config.direction) {
+		case CROSSAUDIO_DIR_IN:
+			direction = PW_DIRECTION_INPUT;
+			break;
+		case CROSSAUDIO_DIR_OUT:
+			direction = PW_DIRECTION_OUTPUT;
+			break;
+		default:
+			return CROSSAUDIO_EC_GENERIC;
+	}
+
+	m_frameSize = sizeof(float) * config.channels;
+
+	auto info = configToInfo(config);
+
+	std::byte buffer[1024];
+	spa_pod_builder b     = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+	const spa_pod *params = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
+
+	const spa_dict_item items[] = { { PW_KEY_MEDIA_TYPE, "Audio" },
+									{ PW_KEY_MEDIA_CATEGORY,
+									  direction == PW_DIRECTION_INPUT ? "Capture" : "Playback" } };
+	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
+
+	const auto lock = m_engine.locker();
+
+	lib.stream_update_properties(m_stream, &dict);
+	lib.stream_add_listener(m_stream, &m_listener, direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput,
+							this);
+	lib.stream_connect(m_stream, direction, PW_ID_ANY,
+					   PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS, &params, 1);
+
+	return CROSSAUDIO_EC_OK;
+}
+
+ErrorCode BE_Flux::stop() {
+	const auto lock = m_engine.locker();
+
+	lib.stream_disconnect(m_stream);
+	spa_hook_remove(&m_listener);
+
+	return CROSSAUDIO_EC_OK;
+}
+
+const char *BE_Flux::nameGet() const {
+	if (const auto props = lib.stream_get_properties(m_stream)) {
+		return lib.properties_get(props, PW_KEY_NODE_NAME);
+	}
+
+	return nullptr;
+}
+
+ErrorCode BE_Flux::nameSet(const char *name) {
+	const spa_dict_item items[] = { { PW_KEY_NODE_NAME, name } };
+	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
+
+	const auto lock = m_engine.locker();
+
+	return lib.stream_update_properties(m_stream, &dict) >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
 
 static void processInput(void *userData) {
 	auto &flux = *static_cast< BE_Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux.stream);
+	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {
 		return;
 	}
@@ -341,15 +357,15 @@ static void processInput(void *userData) {
 
 	FluxData fluxData = { data->data, data->chunk->size / data->chunk->stride };
 
-	flux.feedback.process(flux.feedback.userData, &fluxData);
+	flux.m_feedback.process(flux.m_feedback.userData, &fluxData);
 
-	lib.stream_queue_buffer(flux.stream, buf);
+	lib.stream_queue_buffer(flux.m_stream, buf);
 }
 
 static void processOutput(void *userData) {
 	auto &flux = *static_cast< BE_Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux.stream);
+	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {
 		return;
 	}
@@ -359,27 +375,27 @@ static void processOutput(void *userData) {
 		return;
 	}
 
-	FluxData fluxData = { data->data, data->maxsize / flux.frameSize };
+	FluxData fluxData = { data->data, data->maxsize / flux.m_frameSize };
 
-	flux.feedback.process(flux.feedback.userData, &fluxData);
+	flux.m_feedback.process(flux.m_feedback.userData, &fluxData);
 
-	data->chunk->size   = fluxData.frames * flux.frameSize;
-	data->chunk->stride = flux.frameSize;
+	data->chunk->size   = fluxData.frames * flux.m_frameSize;
+	data->chunk->stride = flux.m_frameSize;
 
-	lib.stream_queue_buffer(flux.stream, buf);
+	lib.stream_queue_buffer(flux.m_stream, buf);
 }
 
-static inline spa_audio_info_raw configToInfo(const FluxConfig *config) {
+static inline spa_audio_info_raw configToInfo(const FluxConfig &config) {
 	spa_audio_info_raw info = {};
 
-	info.channels = config->channels;
+	info.channels = config.channels;
 	info.format   = SPA_AUDIO_FORMAT_F32;
-	info.rate     = config->sampleRate;
+	info.rate     = config.sampleRate;
 
-	for (uint8_t i = 0; i < SPA_MIN(config->channels, CROSSAUDIO_ARRAY_SIZE(config->position)); ++i) {
+	for (uint8_t i = 0; i < SPA_MIN(config.channels, CROSSAUDIO_ARRAY_SIZE(config.position)); ++i) {
 		spa_audio_channel channel;
 
-		switch (config->position[i]) {
+		switch (config.position[i]) {
 			default:
 			case CROSSAUDIO_CH_NONE:
 				channel = SPA_AUDIO_CHANNEL_UNKNOWN;

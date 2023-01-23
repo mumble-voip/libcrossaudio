@@ -22,12 +22,35 @@ using FluxFeedback = CrossAudio_FluxFeedback;
 struct spa_audio_info_raw;
 
 struct BE_Engine {
-	BE_Engine()  = default;
-	~BE_Engine() = default;
+	class Locker {
+	public:
+		Locker(BE_Engine &engine) : m_engine(engine) { m_engine.lock(); }
 
-	pw_thread_loop *threadLoop;
-	pw_context *context;
-	pw_core *core;
+		~Locker() { m_engine.unlock(); };
+
+	private:
+		BE_Engine &m_engine;
+	};
+
+	BE_Engine();
+	~BE_Engine();
+
+	constexpr operator bool() const { return m_threadLoop && m_context; }
+
+	Locker locker() { return Locker(*this); };
+
+	void lock();
+	void unlock();
+
+	const char *nameGet() const;
+	ErrorCode nameSet(const char *name);
+
+	ErrorCode start();
+	ErrorCode stop();
+
+	pw_thread_loop *m_threadLoop;
+	pw_context *m_context;
+	pw_core *m_core;
 
 private:
 	BE_Engine(const BE_Engine &)            = delete;
@@ -35,14 +58,22 @@ private:
 };
 
 struct BE_Flux {
-	BE_Flux()  = default;
-	~BE_Flux() = default;
+	BE_Flux(BE_Engine &engine);
+	~BE_Flux();
 
-	BE_Engine *engine;
-	FluxFeedback feedback;
-	spa_hook listener;
-	pw_stream *stream;
-	uint32_t frameSize;
+	constexpr operator bool() const { return m_stream; }
+
+	const char *nameGet() const;
+	ErrorCode nameSet(const char *name);
+
+	ErrorCode start(FluxConfig &config, const FluxFeedback &feedback);
+	ErrorCode stop();
+
+	BE_Engine &m_engine;
+	FluxFeedback m_feedback;
+	spa_hook m_listener;
+	pw_stream *m_stream;
+	uint32_t m_frameSize;
 
 private:
 	BE_Flux(const BE_Flux &)            = delete;
@@ -75,12 +106,9 @@ static ErrorCode fluxNameSet(BE_Flux *flux, const char *name);
 
 // Internal functions
 
-static inline void engineLock(BE_Engine *engine);
-static inline void engineUnlock(BE_Engine *engine);
-
 static void processInput(void *userData);
 static void processOutput(void *userData);
 
-static inline spa_audio_info_raw configToInfo(const FluxConfig *config);
+static inline spa_audio_info_raw configToInfo(const FluxConfig &config);
 
 #endif

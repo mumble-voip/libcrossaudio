@@ -7,14 +7,14 @@
 
 #include <dlfcn.h>
 
-#define LOAD_SYM(var)                            \
-	*(void **) &var = dlsym(handle, "pw_" #var); \
-	if (!var) {                                  \
-		unload();                                \
-		return CROSSAUDIO_EC_SYMBOL;             \
+#define LOAD_SYM(var)                              \
+	*(void **) &var = dlsym(m_handle, "pw_" #var); \
+	if (!var) {                                    \
+		unload();                                  \
+		return CROSSAUDIO_EC_SYMBOL;               \
 	}
 
-Library::Library() : handle(nullptr) {
+Library::Library() : m_handle(nullptr) {
 }
 
 Library::~Library() {
@@ -22,7 +22,7 @@ Library::~Library() {
 }
 
 ErrorCode Library::load(const std::string_view libraryName) {
-	if (!(handle = dlopen(libraryName.data(), RTLD_LAZY))) {
+	if (!(m_handle = dlopen(libraryName.data(), RTLD_LAZY))) {
 		return CROSSAUDIO_EC_LIBRARY;
 	}
 
@@ -66,8 +66,8 @@ ErrorCode Library::load(const std::string_view libraryName) {
 }
 
 void Library::unload() {
-	if (handle) {
-		dlclose(handle);
-		handle = nullptr;
+	if (m_handle) {
+		dlclose(m_handle);
+		m_handle = nullptr;
 	}
 }

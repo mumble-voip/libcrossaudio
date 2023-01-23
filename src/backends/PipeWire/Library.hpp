@@ -18,16 +18,17 @@ using ErrorCode = CrossAudio_ErrorCode;
 
 struct pw_thread_loop;
 
-struct Library {
+class Library {
+public:
 	Library();
 	~Library();
 
-	explicit operator bool() const { return handle != nullptr; }
+	explicit operator bool() const { return m_handle; }
 
 	ErrorCode load(const std::string_view libraryName);
 	void unload();
 
-	void *handle;
+	void *m_handle;
 
 	const char *(*get_library_version)();
 
