@@ -5,9 +5,15 @@
 
 add_executable(test_loopback "Loopback.c")
 
-set_target_properties(${TARGET}
+set_target_properties(test_loopback
 	PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/tests"
+)
+
+target_compile_definitions(test_loopback
+	PRIVATE
+		$<$<PLATFORM_ID:Linux>:"OS_LINUX">
+		$<$<PLATFORM_ID:Windows>:"OS_WINDOWS">
 )
 
 target_link_libraries(test_loopback

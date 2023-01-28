@@ -35,7 +35,11 @@ static void outProcess(void *userData, FluxData *data) {
 }
 
 int main() {
+#if defined(OS_LINUX)
 	const Backend backend = CROSSAUDIO_BACKEND_PIPEWIRE;
+#elif defined(OS_WINDOWS)
+	const Backend backend = CROSSAUDIO_BACKEND_WASAPI;
+#endif
 
 	ErrorCode ec = CrossAudio_backendInit(backend);
 	if (ec != CROSSAUDIO_EC_OK) {

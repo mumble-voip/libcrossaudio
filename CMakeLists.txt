@@ -38,6 +38,7 @@ set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 
 if(WIN32)
 	add_definitions(
+		"-D_CRT_SECURE_NO_WARNINGS"
 		"-DNOMINMAX"
 		"-DWIN32_LEAN_AND_MEAN"
 	)

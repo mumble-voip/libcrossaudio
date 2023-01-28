@@ -53,4 +53,5 @@ add_subdirectory(backends)
 target_link_libraries(crossaudio
 	PRIVATE
 		$<TARGET_NAME_IF_EXISTS:be_pipewire>
+		$<TARGET_NAME_IF_EXISTS:be_wasapi>
 )

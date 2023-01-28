@@ -122,17 +122,28 @@ static inline uint32_t ringBufferWrite(RingBuffer *ringBuffer, const void *src, 
 	}
 
 	if (ringBuffer->tail + size <= ringBuffer->size) {
-		memcpy(&ringBuffer->buf[ringBuffer->tail], buf, size);
+		if (buf) {
+			memcpy(&ringBuffer->buf[ringBuffer->tail], buf, size);
+		} else {
+			memset(&ringBuffer->buf[ringBuffer->tail], 0, size);
+		}
 
 		ringBuffer->tail += size;
 	} else {
 		uint32_t sizePart = ringBuffer->size - ringBuffer->tail;
 
-		memcpy(&ringBuffer->buf[ringBuffer->tail], buf, sizePart);
+		if (buf) {
+			memcpy(&ringBuffer->buf[ringBuffer->tail], buf, sizePart);
 
-		buf += sizePart;
-		sizePart = size - sizePart;
-		memcpy(ringBuffer->buf, buf, sizePart);
+			buf += sizePart;
+			sizePart = size - sizePart;
+			memcpy(ringBuffer->buf, buf, sizePart);
+		} else {
+			memset(&ringBuffer->buf[ringBuffer->tail], 0, sizePart);
+
+			sizePart = size - sizePart;
+			memset(ringBuffer->buf, 0, sizePart);
+		}
 
 		ringBuffer->tail = sizePart;
 	}

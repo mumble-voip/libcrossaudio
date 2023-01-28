@@ -6,3 +6,7 @@
 if(LINUX)
 	add_subdirectory(PipeWire)
 endif()
+
+if(WIN32)
+	add_subdirectory(WASAPI)
+endif()

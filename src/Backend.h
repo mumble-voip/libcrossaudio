@@ -58,8 +58,10 @@ static inline const BE_Impl *backendGetImpl(const Backend backend) {
 			// return &OSS_Impl;
 		}
 		case CROSSAUDIO_BACKEND_WASAPI: {
-			// extern Backend_Impl WASAPI_Impl;
-			// return &WASAPI_Impl;
+#ifdef HAS_WASAPI
+			extern const BE_Impl WASAPI_Impl;
+			return &WASAPI_Impl;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_COREAUDIO: {
 			// extern Backend_Impl CoreAudio_Impl;
