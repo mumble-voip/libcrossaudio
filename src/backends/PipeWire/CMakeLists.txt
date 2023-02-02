@@ -17,6 +17,13 @@ target_compile_definitions(be_pipewire
 		"HAS_PIPEWIRE"
 )
 
+target_compile_options(be_pipewire
+	PRIVATE
+		# The following warnings are disabled because caused by macros in PipeWire's headers.
+		"-Wno-c99-extensions"
+		"-Wno-gnu-statement-expression"
+)
+
 target_include_directories(be_pipewire
 	PRIVATE
 		${SRC_DIR}

@@ -13,11 +13,18 @@
 #include "crossaudio/Direction.h"
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
+#include "crossaudio/Node.h"
+
+#include <map>
+#include <string>
 
 #include <spa/utils/hook.h>
 
 using FluxConfig   = CrossAudio_FluxConfig;
 using FluxFeedback = CrossAudio_FluxFeedback;
+
+using Direction = CrossAudio_Direction;
+using Node      = CrossAudio_Node;
 
 struct spa_audio_info_raw;
 
@@ -25,11 +32,23 @@ struct BE_Engine {
 	class Locker {
 	public:
 		Locker(BE_Engine &engine) : m_engine(engine) { m_engine.lock(); }
-
 		~Locker() { m_engine.unlock(); };
 
 	private:
 		BE_Engine &m_engine;
+	};
+
+	struct Node {
+		Node(Node &&node);
+		Node(pw_proxy *proxy, const char *name);
+		~Node();
+
+		constexpr explicit operator bool() { return proxy; }
+
+		pw_proxy *proxy;
+		spa_hook listener;
+		std::string name;
+		Direction direction;
 	};
 
 	BE_Engine();
@@ -45,16 +64,26 @@ struct BE_Engine {
 	const char *nameGet() const;
 	ErrorCode nameSet(const char *name);
 
+	::Node *engineNodesGet();
+	ErrorCode engineNodesFree(::Node *nodes);
+
 	ErrorCode start();
 	ErrorCode stop();
+
+	void addNode(const uint32_t id, const spa_dict *props);
+	void removeNode(const uint32_t id);
 
 	pw_thread_loop *m_threadLoop;
 	pw_context *m_context;
 	pw_core *m_core;
+	pw_registry *m_registry;
+	spa_hook m_registryListener;
 
 private:
 	BE_Engine(const BE_Engine &)            = delete;
 	BE_Engine &operator=(const BE_Engine &) = delete;
+
+	std::map< uint32_t, Node > m_nodes;
 };
 
 struct BE_Flux {
@@ -96,6 +125,8 @@ static ErrorCode engineStart(BE_Engine *engine);
 static ErrorCode engineStop(BE_Engine *engine);
 static const char *engineNameGet(BE_Engine *engine);
 static ErrorCode engineNameSet(BE_Engine *engine, const char *name);
+static Node *engineNodesGet(BE_Engine *engine);
+static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes);
 
 static BE_Flux *fluxNew(BE_Engine *engine);
 static ErrorCode fluxFree(BE_Flux *flux);

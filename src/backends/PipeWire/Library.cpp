@@ -43,6 +43,9 @@ ErrorCode Library::load(const std::string_view libraryName) {
 
 	LOAD_SYM(properties_get)
 
+	LOAD_SYM(proxy_destroy)
+	LOAD_SYM(proxy_add_object_listener)
+
 	LOAD_SYM(stream_new)
 	LOAD_SYM(stream_destroy)
 	LOAD_SYM(stream_connect)

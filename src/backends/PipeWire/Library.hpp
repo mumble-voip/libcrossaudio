@@ -47,6 +47,9 @@ public:
 
 	const char *(*properties_get)(const pw_properties *properties, const char *key);
 
+	void (*proxy_destroy)(pw_proxy *proxy);
+	void (*proxy_add_object_listener)(pw_proxy *proxy, spa_hook *listener, const void *funcs, void *data);
+
 	pw_stream *(*stream_new)(pw_core *core, const char *name, pw_properties *props);
 	void (*stream_destroy)(pw_stream *stream);
 	int (*stream_connect)(pw_stream *stream, uint32_t direction, uint32_t target_id, uint32_t flags,
@@ -64,7 +67,7 @@ public:
 	void (*thread_loop_lock)(pw_thread_loop *loop);
 	void (*thread_loop_unlock)(pw_thread_loop *loop);
 	int (*thread_loop_start)(pw_thread_loop *loop);
-	int (*thread_loop_stop)(pw_thread_loop *loop);
+	void (*thread_loop_stop)(pw_thread_loop *loop);
 	pw_loop *(*thread_loop_get_loop)(pw_thread_loop *loop);
 
 private:

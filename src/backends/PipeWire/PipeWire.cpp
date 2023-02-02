@@ -7,7 +7,10 @@
 
 #include "crossaudio/Macros.h"
 
+#include <cstring>
+#include <limits>
 #include <memory>
+#include <utility>
 
 #include <spa/param/audio/format-utils.h>
 #include <spa/pod/builder.h>
@@ -15,34 +18,10 @@
 
 #include <pipewire/core.h>
 #include <pipewire/keys.h>
+#include <pipewire/node.h>
 #include <pipewire/stream.h>
 
 using FluxData = CrossAudio_FluxData;
-
-static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   processInput,
-												   nullptr,
-												   nullptr,
-												   nullptr };
-static constexpr pw_stream_events eventsOutput = { PW_VERSION_STREAM_EVENTS,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   nullptr,
-												   processOutput,
-												   nullptr,
-												   nullptr,
-												   nullptr };
 
 static Library lib;
 
@@ -120,6 +99,14 @@ ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return engine->nameSet(name);
 }
 
+Node *engineNodesGet(BE_Engine *engine) {
+	return engine->engineNodesGet();
+}
+
+ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
+	return engine->engineNodesFree(nodes);
+}
+
 BE_Flux *fluxNew(BE_Engine *engine) {
 	if (auto flux = new BE_Flux(*engine)) {
 		if (*flux) {
@@ -168,8 +155,8 @@ constexpr BE_Impl PipeWire_Impl = {
 	engineStop,
 	engineNameGet,
 	engineNameSet,
-	nullptr,
-	nullptr,
+	engineNodesGet,
+	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -180,6 +167,35 @@ constexpr BE_Impl PipeWire_Impl = {
 };
 // clang-format on
 
+static constexpr auto NODE_TYPE_ID = "PipeWire:Interface:Node";
+
+static constexpr pw_registry_events eventsRegistry = {
+	PW_VERSION_REGISTRY_EVENTS,
+	[](void *userData, const uint32_t id, const uint32_t /*permissions*/, const char *type, const uint32_t /*version*/,
+	   const spa_dict *props) {
+		if (spa_streq(type, NODE_TYPE_ID)) {
+			static_cast< BE_Engine * >(userData)->addNode(id, props);
+		}
+	},
+	[](void *userData, const uint32_t id) { static_cast< BE_Engine * >(userData)->removeNode(id); }
+};
+
+static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
+											   [](void *userData, const pw_node_info *info) {
+												   auto &node= *static_cast< BE_Engine::Node*                    >(userData);
+
+												   uint8_t direction= CROSSAUDIO_DIR_NONE;
+												   if (info->n_input_ports > 0) {
+													   direction |= CROSSAUDIO_DIR_IN;
+												   }
+												   if (info->n_output_ports > 0) {
+													   direction |= CROSSAUDIO_DIR_OUT;
+												   }
+
+												   node.direction= static_cast< Direction >(direction);
+											   },
+											   nullptr };
+
 BE_Engine::BE_Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
 	if ((m_threadLoop = lib.thread_loop_new(nullptr, nullptr))) {
 		m_context = lib.context_new(lib.thread_loop_get_loop(m_threadLoop), nullptr, 0);
@@ -187,6 +203,8 @@ BE_Engine::BE_Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullp
 }
 
 BE_Engine::~BE_Engine() {
+	stop();
+
 	if (m_context) {
 		const auto lock = locker();
 		lib.context_destroy(m_context);
@@ -218,10 +236,11 @@ ErrorCode BE_Engine::start() {
 		return CROSSAUDIO_EC_CONNECT;
 	}
 
-	if (lib.thread_loop_start(m_threadLoop) < 0) {
-		lib.core_disconnect(m_core);
-		m_core = nullptr;
+	m_registry = pw_core_get_registry(m_core, PW_VERSION_REGISTRY, 0);
+	pw_registry_add_listener(m_registry, &m_registryListener, &eventsRegistry, this);
 
+	if (lib.thread_loop_start(m_threadLoop) < 0) {
+		stop();
 		return CROSSAUDIO_EC_GENERIC;
 	}
 
@@ -229,13 +248,28 @@ ErrorCode BE_Engine::start() {
 }
 
 ErrorCode BE_Engine::stop() {
+	lock();
+
+	spa_hook_remove(&m_registryListener);
+
+	m_nodes.clear();
+
+	if (m_registry) {
+		lib.proxy_destroy(reinterpret_cast< pw_proxy * >(m_registry));
+	}
+
 	if (m_core) {
-		const auto lock = locker();
 		lib.core_disconnect(m_core);
 		m_core = nullptr;
 	}
 
-	return lib.thread_loop_stop(m_threadLoop) >= 0 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+	unlock();
+
+	if (m_threadLoop) {
+		lib.thread_loop_stop(m_threadLoop);
+	}
+
+	return CROSSAUDIO_EC_OK;
 }
 
 const char *BE_Engine::nameGet() const {
@@ -259,6 +293,111 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 
 	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
+
+::Node *BE_Engine::engineNodesGet() {
+	const auto lock = locker();
+
+	auto nodes = static_cast< ::Node * >(calloc(m_nodes.size() + 1, sizeof(::Node)));
+
+	size_t i = 0;
+
+	for (const auto &nodeIn : m_nodes) {
+		auto &nodeOut = nodes[i++];
+
+		const auto size = snprintf(nullptr, 0, "%u", nodeIn.first) + 1;
+		nodeOut.id      = static_cast< char      *>(malloc(size));
+		snprintf(nodeOut.id, size, "%u", nodeIn.first);
+
+		nodeOut.name = strdup(nodeIn.second.name.data());
+	}
+
+	return nodes;
+}
+
+ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
+	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
+		auto &node = nodes[i];
+		if (!node.id) {
+			break;
+		}
+
+		free(node.id);
+		free(node.name);
+	}
+
+	free(nodes);
+
+	return CROSSAUDIO_EC_OK;
+}
+
+void BE_Engine::addNode(const uint32_t id, const spa_dict *props) {
+	const char *name;
+
+	if (!(name = spa_dict_lookup(props, PW_KEY_NODE_NAME)) && !(name = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION))
+		&& !(name = spa_dict_lookup(props, PW_KEY_APP_NAME))) {
+		return;
+	}
+
+	auto proxy = static_cast< pw_proxy * >(pw_registry_bind(m_registry, id, NODE_TYPE_ID, PW_VERSION_NODE, 0));
+	if (!proxy) {
+		return;
+	}
+
+	const auto lock = locker();
+
+	if (const auto ret = m_nodes.emplace(id, Node(proxy, name)); ret.second) {
+		auto &node = ret.first->second;
+		lib.proxy_add_object_listener(node.proxy, &node.listener, &eventsNode, &node);
+	}
+}
+
+void BE_Engine::removeNode(const uint32_t id) {
+	const auto lock = locker();
+
+	m_nodes.erase(id);
+}
+
+BE_Engine::Node::Node(Node &&node)
+	: proxy(std::exchange(node.proxy, nullptr)), listener(std::exchange(node.listener, {})), name(std::move(node.name)),
+	  direction(node.direction) {
+}
+
+BE_Engine::Node::Node(pw_proxy *proxy, const char *name)
+	: proxy(proxy), listener(), name(name), direction(CROSSAUDIO_DIR_NONE) {
+}
+
+BE_Engine::Node::~Node() {
+	spa_hook_remove(&listener);
+
+	if (proxy) {
+		lib.proxy_destroy(proxy);
+	}
+}
+
+static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   processInput,
+												   nullptr,
+												   nullptr,
+												   nullptr };
+static constexpr pw_stream_events eventsOutput = { PW_VERSION_STREAM_EVENTS,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   nullptr,
+												   processOutput,
+												   nullptr,
+												   nullptr,
+												   nullptr };
 
 BE_Flux::BE_Flux(BE_Engine &engine) : m_engine(engine), m_stream(nullptr), m_frameSize(0) {
 	if (engine.m_core) {
