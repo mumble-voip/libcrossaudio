@@ -55,3 +55,7 @@ target_link_libraries(crossaudio
 		$<TARGET_NAME_IF_EXISTS:be_pipewire>
 		$<TARGET_NAME_IF_EXISTS:be_wasapi>
 )
+
+if(CROSSAUDIO_BUILD_TESTS)
+	add_subdirectory(tests)
+endif()

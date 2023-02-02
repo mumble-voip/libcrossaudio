@@ -45,7 +45,3 @@ if(WIN32)
 endif()
 
 add_subdirectory(src)
-
-if(CROSSAUDIO_BUILD_TESTS)
-	add_subdirectory(tests)
-endif()
