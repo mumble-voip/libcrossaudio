@@ -168,6 +168,8 @@ constexpr BE_Impl PipeWire_Impl = {
 	engineStop,
 	engineNameGet,
 	engineNameSet,
+	nullptr,
+	nullptr,
 
 	fluxNew,
 	fluxFree,

@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 
+typedef struct CrossAudio_Node Node;
+
 Engine *CrossAudio_engineNew(const Backend backend) {
 	const BE_Impl *impl = backendGetImpl(backend);
 	if (!impl) {
@@ -51,4 +53,12 @@ const char *CrossAudio_engineNameGet(Engine *engine) {
 
 ErrorCode CrossAudio_engineNameSet(Engine *engine, const char *name) {
 	return engine->beImpl->engineNameSet(engine->beData, name);
+}
+
+Node *CrossAudio_engineNodesGet(Engine *engine) {
+	return engine->beImpl->engineNodesGet(engine->beData);
+}
+
+ErrorCode CrossAudio_engineNodesFree(Engine *engine, Node *nodes) {
+	return engine->beImpl->engineNodesFree(engine->beData, nodes);
 }

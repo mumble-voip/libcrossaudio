@@ -157,6 +157,8 @@ const BE_Impl WASAPI_Impl = {
 	engineStop,
 	engineNameGet,
 	engineNameSet,
+	nullptr,
+	nullptr,
 
 	fluxNew,
 	fluxFree,
