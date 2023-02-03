@@ -10,6 +10,7 @@ macro(use_test TEST_NAME)
 	list(APPEND TESTS "Test${TEST_NAME}")
 endmacro()
 
+use_test("Enum")
 use_test("Loopback")
 
 foreach(CURRENT_TEST IN LISTS TESTS)

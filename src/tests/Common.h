@@ -12,6 +12,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#if defined(OS_LINUX)
+#	define BACKEND CROSSAUDIO_BACKEND_PIPEWIRE
+#elif defined(OS_WINDOWS)
+#	define BACKEND CROSSAUDIO_BACKEND_WASAPI
+#endif
+
 typedef enum CrossAudio_Backend Backend;
 typedef enum CrossAudio_ErrorCode ErrorCode;
 
@@ -20,8 +26,30 @@ typedef struct CrossAudio_Flux Flux;
 typedef struct CrossAudio_FluxConfig FluxConfig;
 typedef struct CrossAudio_FluxFeedback FluxFeedback;
 
-static inline Engine *createEngine(const Backend backend) {
-	Engine *engine = CrossAudio_engineNew(backend);
+static inline bool initBackend() {
+	const ErrorCode ec = CrossAudio_backendInit(BACKEND);
+	if (ec != CROSSAUDIO_EC_OK) {
+		printf("CrossAudio_backendInit() failed with error \"%s\"!\n", CrossAudio_ErrorCodeText(ec));
+		return false;
+	}
+
+	printf("Backend name: %s | version: %s\n\n", CrossAudio_backendName(BACKEND), CrossAudio_backendVersion(BACKEND));
+
+	return true;
+}
+
+static inline bool deinitBackend() {
+	const ErrorCode ec = CrossAudio_backendDeinit(BACKEND);
+	if (ec != CROSSAUDIO_EC_OK) {
+		printf("CrossAudio_backendDeinit() failed with error \"%s\"!\n", CrossAudio_ErrorCodeText(ec));
+		return false;
+	}
+
+	return true;
+}
+
+static inline Engine *createEngine() {
+	Engine *engine = CrossAudio_engineNew(BACKEND);
 	if (!engine) {
 		printf("CrossAudio_engineNew() failed!\n");
 		return NULL;

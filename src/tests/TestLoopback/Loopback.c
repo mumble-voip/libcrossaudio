@@ -35,21 +35,11 @@ static void outProcess(void *userData, FluxData *data) {
 }
 
 int main() {
-#if defined(OS_LINUX)
-	const Backend backend = CROSSAUDIO_BACKEND_PIPEWIRE;
-#elif defined(OS_WINDOWS)
-	const Backend backend = CROSSAUDIO_BACKEND_WASAPI;
-#endif
-
-	ErrorCode ec = CrossAudio_backendInit(backend);
-	if (ec != CROSSAUDIO_EC_OK) {
-		printf("CrossAudio_backendInit() failed with error \"%s\"!\n", CrossAudio_ErrorCodeText(ec));
+	if (!initBackend()) {
 		return 1;
 	}
 
-	printf("Backend version: %s\n", CrossAudio_backendVersion(backend));
-
-	Engine *engine = createEngine(backend);
+	Engine *engine = createEngine();
 	if (!engine) {
 		return 2;
 	}
@@ -94,9 +84,7 @@ FINAL:
 		return 6;
 	}
 
-	ec = CrossAudio_backendDeinit(backend);
-	if (ec != CROSSAUDIO_EC_OK) {
-		printf("CrossAudio_backendDeinit() failed with error \"%s\"!\n", CrossAudio_ErrorCodeText(ec));
+	if (!deinitBackend()) {
 		return 7;
 	}
 
