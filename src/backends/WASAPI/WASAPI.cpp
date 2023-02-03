@@ -15,6 +15,7 @@
 
 #include <audioclient.h>
 #include <avrt.h>
+#include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
 
 using FluxData = CrossAudio_FluxData;
@@ -109,6 +110,14 @@ ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return engine->nameSet(name);
 }
 
+Node *engineNodesGet(BE_Engine *engine) {
+	return engine->engineNodesGet();
+}
+
+ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
+	return engine->engineNodesFree(nodes);
+}
+
 BE_Flux *fluxNew(BE_Engine *engine) {
 	if (auto flux = new BE_Flux(*engine)) {
 		if (*flux) {
@@ -157,8 +166,8 @@ const BE_Impl WASAPI_Impl = {
 	engineStop,
 	engineNameGet,
 	engineNameSet,
-	nullptr,
-	nullptr,
+	engineNodesGet,
+	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -196,6 +205,88 @@ const char *BE_Engine::nameGet() const {
 
 ErrorCode BE_Engine::nameSet(const char *name) {
 	m_name = name;
+
+	return CROSSAUDIO_EC_OK;
+}
+
+::Node *BE_Engine::engineNodesGet() {
+	IMMDeviceCollection *collection;
+	if (m_enumerator->EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE, &collection) != S_OK) {
+		return nullptr;
+	}
+
+	UINT count = 0;
+	collection->GetCount(&count);
+
+	auto nodes = static_cast< ::Node * >(calloc(count + 1, sizeof(::Node)));
+
+	for (decltype(count) i = 0; i < count; ++i) {
+		IMMDevice *device;
+		if (collection->Item(i, &device) != S_OK) {
+			continue;
+		}
+
+		IPropertyStore *store;
+		if (device->OpenPropertyStore(STGM_READ, &store) != S_OK) {
+			device->Release();
+			continue;
+		}
+
+		LPWSTR id;
+		if (device->GetId(&id) == S_OK) {
+			auto &node = nodes[i];
+
+			IMMEndpoint *endpoint;
+			if (device->QueryInterface(__uuidof(IMMEndpoint), reinterpret_cast< void ** >(&endpoint)) == S_OK) {
+				EDataFlow dataflow;
+				if (endpoint->GetDataFlow(&dataflow) == S_OK) {
+					switch (dataflow) {
+						case eRender:
+							node.direction = CROSSAUDIO_DIR_OUT;
+							break;
+						case eCapture:
+							node.direction = CROSSAUDIO_DIR_IN;
+							break;
+						case eAll:
+							node.direction = CROSSAUDIO_DIR_BOTH;
+							break;
+					}
+				}
+
+				endpoint->Release();
+			}
+
+			node.id = utf16To8(id);
+			CoTaskMemFree(id);
+
+			PROPVARIANT varName{};
+			if (store->GetValue(PKEY_Device_FriendlyName, &varName) == S_OK) {
+				node.name = utf16To8(varName.pwszVal);
+				PropVariantClear(&varName);
+			}
+		}
+
+		store->Release();
+		device->Release();
+	}
+
+	collection->Release();
+
+	return nodes;
+}
+
+ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
+	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
+		auto &node = nodes[i];
+		if (!node.id) {
+			break;
+		}
+
+		free(node.id);
+		free(node.name);
+	}
+
+	free(nodes);
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -470,4 +561,17 @@ cleanup:
 	}
 
 	deinit();
+}
+
+static char *utf16To8(const wchar_t *utf16) {
+	const auto utf16Size = static_cast< int >(wcslen(utf16) + 1);
+
+	const auto utf8Size = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16Size, nullptr, 0, nullptr, nullptr);
+	auto utf8           = static_cast< char           *>(malloc(utf8Size));
+	if (WideCharToMultiByte(CP_UTF8, 0, utf16, utf16Size, utf8, utf8Size, nullptr, nullptr) <= 0) {
+		free(utf8);
+		return nullptr;
+	}
+
+	return utf8;
 }

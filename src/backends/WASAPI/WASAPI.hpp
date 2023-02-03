@@ -8,14 +8,17 @@
 
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
+#include "crossaudio/Node.h"
 
 #include <atomic>
 #include <memory>
 #include <string>
 
-typedef CrossAudio_ErrorCode ErrorCode;
 typedef CrossAudio_FluxConfig FluxConfig;
 typedef CrossAudio_FluxFeedback FluxFeedback;
+
+typedef CrossAudio_ErrorCode ErrorCode;
+typedef CrossAudio_Node Node;
 
 struct BE_Impl;
 
@@ -42,6 +45,9 @@ struct BE_Engine {
 
 	const char *nameGet() const;
 	ErrorCode nameSet(const char *name);
+
+	::Node *engineNodesGet();
+	ErrorCode engineNodesFree(::Node *nodes);
 
 	ErrorCode start();
 	ErrorCode stop();
@@ -110,5 +116,9 @@ static ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback
 static ErrorCode fluxStop(BE_Flux *flux);
 static const char *fluxNameGet(BE_Flux *flux);
 static ErrorCode fluxNameSet(BE_Flux *flux, const char *name);
+
+// Internal functions
+
+static char *utf16To8(const wchar_t *utf16);
 
 #endif
