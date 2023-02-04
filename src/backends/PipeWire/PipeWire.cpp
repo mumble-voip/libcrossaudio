@@ -186,10 +186,10 @@ static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
 
 												   uint8_t direction= CROSSAUDIO_DIR_NONE;
 												   if (info->n_input_ports > 0) {
-													   direction |= CROSSAUDIO_DIR_IN;
+													   direction |= CROSSAUDIO_DIR_OUT;
 												   }
 												   if (info->n_output_ports > 0) {
-													   direction |= CROSSAUDIO_DIR_OUT;
+													   direction |= CROSSAUDIO_DIR_IN;
 												   }
 
 												   node.direction= static_cast< Direction >(direction);
@@ -303,6 +303,8 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 
 	for (const auto &nodeIn : m_nodes) {
 		auto &nodeOut = nodes[i++];
+
+		nodeOut.direction = nodeIn.second.direction;
 
 		const auto size = snprintf(nullptr, 0, "%u", nodeIn.first) + 1;
 		nodeOut.id      = static_cast< char      *>(malloc(size));
