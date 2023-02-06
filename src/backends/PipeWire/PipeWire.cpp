@@ -454,18 +454,22 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	spa_pod_builder b     = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
 	const spa_pod *params = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
 
-	const spa_dict_item items[] = { { PW_KEY_MEDIA_TYPE, "Audio" },
-									{ PW_KEY_MEDIA_CATEGORY,
-									  direction == PW_DIRECTION_INPUT ? "Capture" : "Playback" } };
-	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
+	spa_dict_item items[] = { { PW_KEY_MEDIA_TYPE, "Audio" },
+							  { PW_KEY_MEDIA_CATEGORY, direction == PW_DIRECTION_INPUT ? "Capture" : "Playback" },
+							  { PW_KEY_TARGET_OBJECT, config.node } };
+	const spa_dict dict   = SPA_DICT_INIT_ARRAY(items);
+
+	uint32_t flags = PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS;
+	if (config.node) {
+		flags |= PW_STREAM_FLAG_AUTOCONNECT;
+	}
 
 	const auto lock = m_engine.locker();
 
 	lib.stream_update_properties(m_stream, &dict);
 	lib.stream_add_listener(m_stream, &m_listener, direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput,
 							this);
-	lib.stream_connect(m_stream, direction, PW_ID_ANY,
-					   PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS, &params, 1);
+	lib.stream_connect(m_stream, direction, PW_ID_ANY, flags, &params, 1);
 
 	return CROSSAUDIO_EC_OK;
 }
