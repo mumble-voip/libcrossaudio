@@ -7,6 +7,7 @@
 
 #include "Backend.h"
 
+#include <cstring>
 #include <functional>
 #include <thread>
 #include <vector>
@@ -331,7 +332,15 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 			return CROSSAUDIO_EC_GENERIC;
 	}
 
-	if (m_engine.m_enumerator->GetDefaultAudioEndpoint(dataflow, role, &m_device) != S_OK) {
+	if (config.node && strcmp(config.node, CROSSAUDIO_FLUX_DEFAULT_NODE) != 0) {
+		const auto node = utf8To16(config.node);
+		const auto ret = m_engine.m_enumerator->GetDevice(node, &m_device);
+		free(node);
+
+		if (ret != S_OK) {
+			return CROSSAUDIO_EC_GENERIC;
+		}
+	} else if (m_engine.m_enumerator->GetDefaultAudioEndpoint(dataflow, role, &m_device) != S_OK) {
 		return CROSSAUDIO_EC_GENERIC;
 	}
 
@@ -574,4 +583,17 @@ static char *utf16To8(const wchar_t *utf16) {
 	}
 
 	return utf8;
+}
+
+static wchar_t *utf8To16(const char *utf8) {
+	const auto utf8Size = static_cast< int >(strlen(utf8) + 1);
+
+	const int utf16Size = sizeof(wchar_t) * MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, nullptr, 0);
+	auto utf16           = static_cast< wchar_t           *>(malloc(utf16Size));
+	if (MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, utf16, utf16Size / sizeof(wchar_t)) <= 0) {
+		free(utf16);
+		return nullptr;
+	}
+
+	return utf16;
 }

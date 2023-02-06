@@ -120,5 +120,6 @@ static ErrorCode fluxNameSet(BE_Flux *flux, const char *name);
 // Internal functions
 
 static char *utf16To8(const wchar_t *utf16);
+static wchar_t *utf8To16(const char *utf8);
 
 #endif
