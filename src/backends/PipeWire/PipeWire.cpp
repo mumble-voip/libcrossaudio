@@ -7,6 +7,7 @@
 
 #include "crossaudio/Macros.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -301,16 +302,17 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 
 	size_t i = 0;
 
-	for (const auto &nodeIn : m_nodes) {
-		auto &nodeOut = nodes[i++];
+	for (const auto &iter : m_nodes) {
+		const auto &nodeIn = iter.second;
+		auto &nodeOut      = nodes[i++];
 
-		nodeOut.direction = nodeIn.second.direction;
+		nodeOut.direction = nodeIn.direction;
 
-		const auto size = snprintf(nullptr, 0, "%u", nodeIn.first) + 1;
+		const auto size = snprintf(nullptr, 0, "%u", nodeIn.serial) + 1;
 		nodeOut.id      = static_cast< char      *>(malloc(size));
-		snprintf(nodeOut.id, size, "%u", nodeIn.first);
+		snprintf(nodeOut.id, size, "%u", nodeIn.serial);
 
-		nodeOut.name = strdup(nodeIn.second.name.data());
+		nodeOut.name = strdup(nodeIn.name.data());
 	}
 
 	return nodes;
@@ -333,8 +335,17 @@ ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
 }
 
 void BE_Engine::addNode(const uint32_t id, const spa_dict *props) {
-	const char *name;
+	const char *serialStr = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL);
+	if (!serialStr) {
+		return;
+	}
 
+	const uint32_t serial = std::strtoul(serialStr, nullptr, 10);
+	if (errno != 0) {
+		return;
+	}
+
+	const char *name;
 	if (!(name = spa_dict_lookup(props, PW_KEY_NODE_NAME)) && !(name = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION))
 		&& !(name = spa_dict_lookup(props, PW_KEY_APP_NAME))) {
 		return;
@@ -347,7 +358,7 @@ void BE_Engine::addNode(const uint32_t id, const spa_dict *props) {
 
 	const auto lock = locker();
 
-	if (const auto ret = m_nodes.emplace(id, Node(proxy, name)); ret.second) {
+	if (const auto ret = m_nodes.emplace(id, Node(proxy, serial, name)); ret.second) {
 		auto &node = ret.first->second;
 		lib.proxy_add_object_listener(node.proxy, &node.listener, &eventsNode, &node);
 	}
@@ -360,12 +371,12 @@ void BE_Engine::removeNode(const uint32_t id) {
 }
 
 BE_Engine::Node::Node(Node &&node)
-	: proxy(std::exchange(node.proxy, nullptr)), listener(std::exchange(node.listener, {})), name(std::move(node.name)),
-	  direction(node.direction) {
+	: proxy(std::exchange(node.proxy, nullptr)), listener(std::exchange(node.listener, {})), serial(node.serial),
+	  name(std::move(node.name)), direction(node.direction) {
 }
 
-BE_Engine::Node::Node(pw_proxy *proxy, const char *name)
-	: proxy(proxy), listener(), name(name), direction(CROSSAUDIO_DIR_NONE) {
+BE_Engine::Node::Node(pw_proxy *proxy, const uint32_t serial, const char *name)
+	: proxy(proxy), listener(), serial(serial), name(name), direction(CROSSAUDIO_DIR_NONE) {
 }
 
 BE_Engine::Node::~Node() {

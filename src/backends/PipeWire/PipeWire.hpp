@@ -40,13 +40,14 @@ struct BE_Engine {
 
 	struct Node {
 		Node(Node &&node);
-		Node(pw_proxy *proxy, const char *name);
+		Node(pw_proxy *proxy, const uint32_t serial, const char *name);
 		~Node();
 
 		constexpr explicit operator bool() { return proxy; }
 
 		pw_proxy *proxy;
 		spa_hook listener;
+		uint32_t serial;
 		std::string name;
 		Direction direction;
 	};
