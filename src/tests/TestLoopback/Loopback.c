@@ -34,7 +34,30 @@ static void outProcess(void *userData, FluxData *data) {
 	data->frames = bytes / FRAME_SIZE;
 }
 
-int main() {
+static void parseOptions(const char **inputNodeID, const char **outputNodeID, const char *option, const char *value) {
+	if (strcmp(option, "--input") == 0) {
+		*inputNodeID = value;
+	} else if (strcmp(option, "--output") == 0) {
+		*outputNodeID = value;
+	}
+}
+
+int main(const int argc, const char *argv[]) {
+	const char *inputNodeID  = CROSSAUDIO_FLUX_DEFAULT_NODE;
+	const char *outputNodeID = CROSSAUDIO_FLUX_DEFAULT_NODE;
+
+	switch (argc) {
+		case 5:
+			parseOptions(&inputNodeID, &outputNodeID, argv[3], argv[4]);
+		case 3:
+			parseOptions(&inputNodeID, &outputNodeID, argv[1], argv[2]);
+		case 1:
+			break;
+		default:
+			printf("Usage: TestLoopback --input <input node ID> --output <output node ID>\n");
+			return -1;
+	}
+
 	if (!initBackend()) {
 		return 1;
 	}
@@ -53,8 +76,10 @@ int main() {
 
 	int ret = 0;
 
-	Flux *streams[]       = { NULL, NULL };
-	FluxConfig config     = { .direction = CROSSAUDIO_DIR_IN, .channels = CHANNELS, .sampleRate = RATE };
+	Flux *streams[]   = { NULL, NULL };
+	FluxConfig config = {
+		.node = inputNodeID, .direction = CROSSAUDIO_DIR_IN, .channels = CHANNELS, .sampleRate = RATE
+	};
 	FluxFeedback feedback = { .userData = buffer, .process = inProcess };
 
 	streams[0] = createStream(engine, &config, &feedback);
@@ -64,6 +89,7 @@ int main() {
 		goto FINAL;
 	}
 
+	config.node      = outputNodeID;
 	config.direction = CROSSAUDIO_DIR_OUT;
 	feedback.process = outProcess;
 
