@@ -13,10 +13,13 @@
 
 #include <stdint.h>
 
+#define CROSSAUDIO_FLUX_DEFAULT_NODE ("")
+
 struct CrossAudio_Engine;
 struct CrossAudio_Flux;
 
 struct CrossAudio_FluxConfig {
+	const char *node;
 	enum CrossAudio_Direction direction;
 	uint8_t channels;
 	uint32_t position[CROSSAUDIO_CH_NUM];
