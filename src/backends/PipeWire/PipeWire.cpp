@@ -543,79 +543,113 @@ static void processOutput(void *userData) {
 	lib.stream_queue_buffer(flux.m_stream, buf);
 }
 
-static inline spa_audio_info_raw configToInfo(const FluxConfig &config) {
+static constexpr spa_audio_info_raw configToInfo(const FluxConfig &config) {
 	spa_audio_info_raw info = {};
 
+	info.format   = translateFormat(config.bitFormat, config.sampleBits);
 	info.channels = config.channels;
-	info.format   = SPA_AUDIO_FORMAT_F32;
 	info.rate     = config.sampleRate;
 
 	for (uint8_t i = 0; i < SPA_MIN(config.channels, CROSSAUDIO_ARRAY_SIZE(config.position)); ++i) {
-		spa_audio_channel channel;
-
-		switch (config.position[i]) {
-			default:
-			case CROSSAUDIO_CH_NONE:
-				channel = SPA_AUDIO_CHANNEL_UNKNOWN;
-				break;
-			case CROSSAUDIO_CH_FRONT_LEFT:
-				channel = SPA_AUDIO_CHANNEL_FL;
-				break;
-			case CROSSAUDIO_CH_FRONT_RIGHT:
-				channel = SPA_AUDIO_CHANNEL_FR;
-				break;
-			case CROSSAUDIO_CH_FRONT_CENTER:
-				channel = SPA_AUDIO_CHANNEL_FC;
-				break;
-			case CROSSAUDIO_CH_LOW_FREQUENCY:
-				channel = SPA_AUDIO_CHANNEL_LFE;
-				break;
-			case CROSSAUDIO_CH_REAR_LEFT:
-				channel = SPA_AUDIO_CHANNEL_RL;
-				break;
-			case CROSSAUDIO_CH_REAR_RIGHT:
-				channel = SPA_AUDIO_CHANNEL_RR;
-				break;
-			case CROSSAUDIO_CH_FRONT_LEFT_CENTER:
-				channel = SPA_AUDIO_CHANNEL_FLC;
-				break;
-			case CROSSAUDIO_CH_FRONT_RIGHT_CENTER:
-				channel = SPA_AUDIO_CHANNEL_FRC;
-				break;
-			case CROSSAUDIO_CH_REAR_CENTER:
-				channel = SPA_AUDIO_CHANNEL_RC;
-				break;
-			case CROSSAUDIO_CH_SIDE_LEFT:
-				channel = SPA_AUDIO_CHANNEL_SL;
-				break;
-			case CROSSAUDIO_CH_SIDE_RIGHT:
-				channel = SPA_AUDIO_CHANNEL_SR;
-				break;
-			case CROSSAUDIO_CH_TOP_CENTER:
-				channel = SPA_AUDIO_CHANNEL_TC;
-				break;
-			case CROSSAUDIO_CH_TOP_FRONT_LEFT:
-				channel = SPA_AUDIO_CHANNEL_TFL;
-				break;
-			case CROSSAUDIO_CH_TOP_FRONT_CENTER:
-				channel = SPA_AUDIO_CHANNEL_TFC;
-				break;
-			case CROSSAUDIO_CH_TOP_FRONT_RIGHT:
-				channel = SPA_AUDIO_CHANNEL_TFR;
-				break;
-			case CROSSAUDIO_CH_TOP_REAR_LEFT:
-				channel = SPA_AUDIO_CHANNEL_TRL;
-				break;
-			case CROSSAUDIO_CH_TOP_REAR_CENTER:
-				channel = SPA_AUDIO_CHANNEL_TRC;
-				break;
-			case CROSSAUDIO_CH_TOP_REAR_RIGHT:
-				channel = SPA_AUDIO_CHANNEL_TRR;
-				break;
-		}
-
-		info.position[i] = channel;
+		info.position[i] = translateChannel(config.position[i]);
 	}
 
 	return info;
+}
+
+static constexpr spa_audio_format translateFormat(const CrossAudio_BitFormat format, const uint8_t sampleBits) {
+	switch (format) {
+		default:
+		case CROSSAUDIO_BF_NONE:
+			break;
+		case CROSSAUDIO_BF_INTEGER_SIGNED:
+			switch (sampleBits) {
+				case 8:
+					return SPA_AUDIO_FORMAT_S8;
+				case 16:
+					return SPA_AUDIO_FORMAT_S16;
+				case 18:
+					return SPA_AUDIO_FORMAT_S18;
+				case 20:
+					return SPA_AUDIO_FORMAT_S20;
+				case 24:
+					return SPA_AUDIO_FORMAT_S24;
+				case 32:
+					return SPA_AUDIO_FORMAT_S32;
+			}
+
+			break;
+		case CROSSAUDIO_BF_INTEGER_UNSIGNED:
+			switch (sampleBits) {
+				case 8:
+					return SPA_AUDIO_FORMAT_U8;
+				case 16:
+					return SPA_AUDIO_FORMAT_U16;
+				case 18:
+					return SPA_AUDIO_FORMAT_U18;
+				case 20:
+					return SPA_AUDIO_FORMAT_U20;
+				case 24:
+					return SPA_AUDIO_FORMAT_U24;
+				case 32:
+					return SPA_AUDIO_FORMAT_U32;
+			}
+
+			break;
+		case CROSSAUDIO_BF_FLOAT:
+			switch (sampleBits) {
+				case 4:
+					return SPA_AUDIO_FORMAT_F32;
+				case 8:
+					return SPA_AUDIO_FORMAT_F64;
+			}
+
+			break;
+	}
+
+	return SPA_AUDIO_FORMAT_UNKNOWN;
+}
+
+static constexpr spa_audio_channel translateChannel(const CrossAudio_Channel channel) {
+	switch (channel) {
+		default:
+		case CROSSAUDIO_CH_NONE:
+			return SPA_AUDIO_CHANNEL_UNKNOWN;
+		case CROSSAUDIO_CH_FRONT_LEFT:
+			return SPA_AUDIO_CHANNEL_FL;
+		case CROSSAUDIO_CH_FRONT_RIGHT:
+			return SPA_AUDIO_CHANNEL_FR;
+		case CROSSAUDIO_CH_FRONT_CENTER:
+			return SPA_AUDIO_CHANNEL_FC;
+		case CROSSAUDIO_CH_LOW_FREQUENCY:
+			return SPA_AUDIO_CHANNEL_LFE;
+		case CROSSAUDIO_CH_REAR_LEFT:
+			return SPA_AUDIO_CHANNEL_RL;
+		case CROSSAUDIO_CH_REAR_RIGHT:
+			return SPA_AUDIO_CHANNEL_RR;
+		case CROSSAUDIO_CH_FRONT_LEFT_CENTER:
+			return SPA_AUDIO_CHANNEL_FLC;
+		case CROSSAUDIO_CH_FRONT_RIGHT_CENTER:
+			return SPA_AUDIO_CHANNEL_FRC;
+		case CROSSAUDIO_CH_REAR_CENTER:
+			return SPA_AUDIO_CHANNEL_RC;
+		case CROSSAUDIO_CH_SIDE_LEFT:
+			return SPA_AUDIO_CHANNEL_SL;
+		case CROSSAUDIO_CH_SIDE_RIGHT:
+			return SPA_AUDIO_CHANNEL_SR;
+		case CROSSAUDIO_CH_TOP_CENTER:
+			return SPA_AUDIO_CHANNEL_TC;
+		case CROSSAUDIO_CH_TOP_FRONT_LEFT:
+			return SPA_AUDIO_CHANNEL_TFL;
+		case CROSSAUDIO_CH_TOP_FRONT_CENTER:
+			return SPA_AUDIO_CHANNEL_TFC;
+		case CROSSAUDIO_CH_TOP_FRONT_RIGHT:
+			return SPA_AUDIO_CHANNEL_TFR;
+		case CROSSAUDIO_CH_TOP_REAR_LEFT:
+			return SPA_AUDIO_CHANNEL_TRL;
+		case CROSSAUDIO_CH_TOP_REAR_CENTER:
+			return SPA_AUDIO_CHANNEL_TRC;
+		case CROSSAUDIO_CH_TOP_REAR_RIGHT:
+			return SPA_AUDIO_CHANNEL_TRR;
+	}
 }

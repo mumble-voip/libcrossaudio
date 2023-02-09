@@ -18,6 +18,7 @@
 #include <map>
 #include <string>
 
+#include <spa/param/audio/raw.h>
 #include <spa/utils/hook.h>
 
 using FluxConfig   = CrossAudio_FluxConfig;
@@ -141,6 +142,8 @@ static ErrorCode fluxNameSet(BE_Flux *flux, const char *name);
 static void processInput(void *userData);
 static void processOutput(void *userData);
 
-static inline spa_audio_info_raw configToInfo(const FluxConfig &config);
+static constexpr spa_audio_info_raw configToInfo(const FluxConfig &config);
+static constexpr spa_audio_format translateFormat(const CrossAudio_BitFormat format, const uint8_t sampleBits);
+static constexpr spa_audio_channel translateChannel(const CrossAudio_Channel channel);
 
 #endif
