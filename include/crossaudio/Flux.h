@@ -6,6 +6,7 @@
 #ifndef CROSSAUDIO_FLUX_H
 #define CROSSAUDIO_FLUX_H
 
+#include "BitFormat.h"
 #include "Channel.h"
 #include "Direction.h"
 #include "ErrorCode.h"
@@ -21,9 +22,11 @@ struct CrossAudio_Flux;
 struct CrossAudio_FluxConfig {
 	const char *node;
 	enum CrossAudio_Direction direction;
-	uint8_t channels;
-	uint32_t position[CROSSAUDIO_CH_NUM];
+	enum CrossAudio_BitFormat bitFormat;
+	uint8_t sampleBits;
 	uint32_t sampleRate;
+	uint8_t channels;
+	enum CrossAudio_Channel position[CROSSAUDIO_CH_NUM];
 };
 
 struct CrossAudio_FluxData {
