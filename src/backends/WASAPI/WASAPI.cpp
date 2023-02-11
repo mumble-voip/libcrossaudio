@@ -21,6 +21,8 @@
 
 using FluxData = CrossAudio_FluxData;
 
+static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &config);
+
 const char *name() {
 	return "WASAPI";
 }
@@ -334,7 +336,7 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 
 	if (config.node && strcmp(config.node, CROSSAUDIO_FLUX_DEFAULT_NODE) != 0) {
 		const auto node = utf8To16(config.node);
-		const auto ret = m_engine.m_enumerator->GetDevice(node, &m_device);
+		const auto ret  = m_engine.m_enumerator->GetDevice(node, &m_device);
 		free(node);
 
 		if (ret != S_OK) {
@@ -360,19 +362,8 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 		return CROSSAUDIO_EC_GENERIC;
 	}
 
-	WAVEFORMATEXTENSIBLE fmt{};
-	WAVEFORMATEX &fmtBasic          = fmt.Format;
-	fmt.Samples.wValidBitsPerSample = sizeof(uint32_t) * 8;
-	fmt.dwChannelMask               = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-	fmt.SubFormat                   = KSDATAFORMAT_SUBTYPE_PCM;
-	fmtBasic.cbSize                 = sizeof(fmt) - sizeof(fmtBasic);
-	fmtBasic.wFormatTag             = WAVE_FORMAT_EXTENSIBLE;
-	fmtBasic.nChannels              = config.channels;
-	fmtBasic.nSamplesPerSec         = config.sampleRate;
-	fmtBasic.nBlockAlign            = fmtBasic.nChannels * fmtBasic.wBitsPerSample / 8;
-	fmtBasic.nAvgBytesPerSec        = fmtBasic.nBlockAlign * fmtBasic.nSamplesPerSec;
-	fmtBasic.wBitsPerSample         = fmt.Samples.wValidBitsPerSample;
-
+	auto fmt       = configToWaveFormat(config);
+	auto &fmtBasic = fmt.Format;
 	WAVEFORMATEXTENSIBLE *fmtProposed;
 	switch (m_client->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &fmtBasic,
 										reinterpret_cast< WAVEFORMATEX ** >(&fmtProposed))) {
@@ -589,11 +580,43 @@ static wchar_t *utf8To16(const char *utf8) {
 	const auto utf8Size = static_cast< int >(strlen(utf8) + 1);
 
 	const int utf16Size = sizeof(wchar_t) * MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, nullptr, 0);
-	auto utf16           = static_cast< wchar_t           *>(malloc(utf16Size));
+	auto utf16          = static_cast< wchar_t          *>(malloc(utf16Size));
 	if (MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, utf16, utf16Size / sizeof(wchar_t)) <= 0) {
 		free(utf16);
 		return nullptr;
 	}
 
 	return utf16;
+}
+
+static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &config) {
+	WAVEFORMATEXTENSIBLE fmt{};
+
+	switch (config.bitFormat) {
+		default:
+		case CROSSAUDIO_BF_NONE:
+			break;
+		case CROSSAUDIO_BF_INTEGER_SIGNED:
+		case CROSSAUDIO_BF_INTEGER_UNSIGNED:
+			fmt.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+			break;
+		case CROSSAUDIO_BF_FLOAT:
+			fmt.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+			break;
+	}
+
+	fmt.Samples.wValidBitsPerSample = config.sampleBits;
+	// TODO: Set full channel mask and adapt positions automatically.
+	fmt.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+
+	auto &fmtBasic           = fmt.Format;
+	fmtBasic.cbSize          = sizeof(fmt) - sizeof(fmtBasic);
+	fmtBasic.wFormatTag      = WAVE_FORMAT_EXTENSIBLE;
+	fmtBasic.nChannels       = config.channels;
+	fmtBasic.nSamplesPerSec  = config.sampleRate;
+	fmtBasic.nBlockAlign     = fmtBasic.nChannels * fmtBasic.wBitsPerSample / 8;
+	fmtBasic.nAvgBytesPerSec = fmtBasic.nBlockAlign * fmtBasic.nSamplesPerSec;
+	fmtBasic.wBitsPerSample  = fmt.Samples.wValidBitsPerSample;
+
+	return fmt;
 }
