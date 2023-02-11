@@ -13,7 +13,7 @@
 #define RATE (48000)
 #define QUANTUM (2048)
 
-#define SAMPLE_SIZE (sizeof(float))
+#define SAMPLE_SIZE (sizeof(int32_t))
 #define FRAME_SIZE (SAMPLE_SIZE * CHANNELS)
 #define FRAG_SIZE (FRAME_SIZE * QUANTUM)
 #define BUFFER_SIZE (FRAG_SIZE * 3)
@@ -76,10 +76,14 @@ int main(const int argc, const char *argv[]) {
 
 	int ret = 0;
 
-	Flux *streams[]   = { NULL, NULL };
-	FluxConfig config = {
-		.node = inputNodeID, .direction = CROSSAUDIO_DIR_IN, .channels = CHANNELS, .sampleRate = RATE
-	};
+	Flux *streams[]       = { NULL, NULL };
+	FluxConfig config     = { .node       = inputNodeID,
+							  .direction  = CROSSAUDIO_DIR_IN,
+							  .bitFormat  = CROSSAUDIO_BF_INTEGER_SIGNED,
+							  .sampleBits = SAMPLE_SIZE * 8,
+							  .sampleRate = RATE,
+							  .channels   = CHANNELS,
+							  .position   = { CROSSAUDIO_CH_FRONT_LEFT, CROSSAUDIO_CH_FRONT_RIGHT } };
 	FluxFeedback feedback = { .userData = buffer, .process = inProcess };
 
 	streams[0] = createStream(engine, &config, &feedback);
