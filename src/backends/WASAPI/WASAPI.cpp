@@ -535,7 +535,15 @@ void BE_Flux::processOutput() {
 			FluxData fluxData = { buffer, frames };
 			m_feedback.process(m_feedback.userData, &fluxData);
 
-			if (client->ReleaseBuffer(frames, 0) != S_OK) {
+			DWORD flags = 0;
+
+			if (!fluxData.data) {
+				flags |= AUDCLNT_BUFFERFLAGS_SILENT;
+			} else if (fluxData.frames < frames) {
+				memset(buffer + fluxData.frames, frames - fluxData.frames, 0);
+			}
+
+			if (client->ReleaseBuffer(frames, flags) != S_OK) {
 				goto cleanup;
 			}
 
