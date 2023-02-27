@@ -40,6 +40,10 @@ struct CrossAudio_FluxFeedback {
 	void (*process)(void *userData, struct CrossAudio_FluxData *data);
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 CROSSAUDIO_EXPORT struct CrossAudio_Flux *CrossAudio_fluxNew(struct CrossAudio_Engine *engine);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxFree(struct CrossAudio_Flux *flux);
 
@@ -52,5 +56,9 @@ CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxStop(struct CrossAudi
 
 CROSSAUDIO_EXPORT const char *CrossAudio_fluxNameGet(struct CrossAudio_Flux *flux);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxNameSet(struct CrossAudio_Flux *flux, const char *name);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

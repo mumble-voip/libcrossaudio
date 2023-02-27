@@ -11,6 +11,10 @@
 struct CrossAudio_Engine;
 struct CrossAudio_Node;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 CROSSAUDIO_EXPORT struct CrossAudio_Engine *CrossAudio_engineNew(enum CrossAudio_Backend backend);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineFree(struct CrossAudio_Engine *engine);
 
@@ -24,5 +28,9 @@ CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineNameSet(struct Cros
 CROSSAUDIO_EXPORT struct CrossAudio_Node *CrossAudio_engineNodesGet(struct CrossAudio_Engine *engine);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineNodesFree(struct CrossAudio_Engine *engine,
 																	   struct CrossAudio_Node *nodes);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

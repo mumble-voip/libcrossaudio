@@ -22,6 +22,10 @@ enum CrossAudio_Backend {
 	CROSSAUDIO_BACKEND_PIPEWIRE
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 CROSSAUDIO_EXPORT bool CrossAudio_backendExists(enum CrossAudio_Backend backend);
 
 CROSSAUDIO_EXPORT const char *CrossAudio_backendName(enum CrossAudio_Backend backend);
@@ -29,5 +33,9 @@ CROSSAUDIO_EXPORT const char *CrossAudio_backendVersion(enum CrossAudio_Backend 
 
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_backendInit(enum CrossAudio_Backend backend);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_backendDeinit(enum CrossAudio_Backend backend);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
