@@ -526,7 +526,7 @@ void BE_Flux::processOutput() {
 			goto cleanup;
 		}
 
-		while (const auto frames = framesMax - framesPending) {
+		while (auto frames = framesMax - framesPending) {
 			BYTE *buffer;
 			if (client->GetBuffer(frames, &buffer) != S_OK) {
 				goto cleanup;
@@ -540,7 +540,11 @@ void BE_Flux::processOutput() {
 			if (!fluxData.data) {
 				flags |= AUDCLNT_BUFFERFLAGS_SILENT;
 			} else if (fluxData.frames < frames) {
-				memset(buffer + fluxData.frames, frames - fluxData.frames, 0);
+				if (fluxData.frames) {
+					memset(buffer + fluxData.frames, frames - fluxData.frames, 0);
+				} else {
+					frames = 0;
+				}
 			}
 
 			if (client->ReleaseBuffer(frames, flags) != S_OK) {
