@@ -19,9 +19,11 @@
 #include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
 
-using FluxData = CrossAudio_FluxData;
+using Direction = CrossAudio_Direction;
+using FluxData  = CrossAudio_FluxData;
 
 static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &config);
+static FluxConfig waveFormatToConfig(const char *node, const Direction direction, const WAVEFORMATEXTENSIBLE &fmt);
 
 const char *name() {
 	return "WASAPI";
@@ -367,12 +369,12 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	WAVEFORMATEXTENSIBLE *fmtProposed;
 	switch (m_client->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &fmtBasic,
 										reinterpret_cast< WAVEFORMATEX ** >(&fmtProposed))) {
-		case S_FALSE:
-			fmt = *fmtProposed;
-			CoTaskMemFree(fmtProposed);
-			[[fallthrough]];
 		case S_OK:
 			break;
+		case S_FALSE:
+			config = waveFormatToConfig(config.node, config.direction, *fmtProposed);
+			CoTaskMemFree(fmtProposed);
+			return CROSSAUDIO_EC_NEGOTIATE;
 		default:
 			return CROSSAUDIO_EC_GENERIC;
 	}
@@ -631,4 +633,28 @@ static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &confi
 	fmtBasic.nAvgBytesPerSec = fmtBasic.nBlockAlign * fmtBasic.nSamplesPerSec;
 
 	return fmt;
+}
+
+static FluxConfig waveFormatToConfig(const char *node, const Direction direction, const WAVEFORMATEXTENSIBLE &fmt) {
+	FluxConfig config{};
+
+	config.node      = node;
+	config.direction = direction;
+
+	if (fmt.SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) {
+		config.bitFormat = CROSSAUDIO_BF_FLOAT;
+	} else if (fmt.SubFormat == KSDATAFORMAT_SUBTYPE_PCM) {
+		config.bitFormat = CROSSAUDIO_BF_INTEGER_SIGNED;
+	}
+
+	config.sampleBits = static_cast< decltype(config.sampleBits) >(fmt.Samples.wValidBitsPerSample);
+
+	const auto &fmtBasic = fmt.Format;
+	config.sampleRate    = fmtBasic.nSamplesPerSec;
+	config.channels      = static_cast< decltype(config.channels) >(fmtBasic.nChannels);
+	// TODO: Set full channel mask and adapt positions automatically.
+	config.position[0] = CROSSAUDIO_CH_FRONT_LEFT;
+	config.position[1] = CROSSAUDIO_CH_FRONT_RIGHT;
+
+	return config;
 }

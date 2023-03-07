@@ -9,6 +9,7 @@
 enum CrossAudio_ErrorCode {
 	CROSSAUDIO_EC_GENERIC = -1,
 	CROSSAUDIO_EC_OK,
+	CROSSAUDIO_EC_NEGOTIATE,
 	CROSSAUDIO_EC_NULL,
 	CROSSAUDIO_EC_INIT,
 	CROSSAUDIO_EC_BUSY,
@@ -23,6 +24,8 @@ static inline const char *CrossAudio_ErrorCodeText(const enum CrossAudio_ErrorCo
 			return "CROSSAUDIO_EC_GENERIC";
 		case CROSSAUDIO_EC_OK:
 			return "CROSSAUDIO_EC_OK";
+		case CROSSAUDIO_EC_NEGOTIATE:
+			return "CROSSAUDIO_EC_NEGOTIATE";
 		case CROSSAUDIO_EC_NULL:
 			return "CROSSAUDIO_EC_NULL";
 		case CROSSAUDIO_EC_INIT:
