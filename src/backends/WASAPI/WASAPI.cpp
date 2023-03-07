@@ -626,9 +626,9 @@ static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &confi
 	fmtBasic.wFormatTag      = WAVE_FORMAT_EXTENSIBLE;
 	fmtBasic.nChannels       = config.channels;
 	fmtBasic.nSamplesPerSec  = config.sampleRate;
+	fmtBasic.wBitsPerSample  = fmt.Samples.wValidBitsPerSample;
 	fmtBasic.nBlockAlign     = fmtBasic.nChannels * fmtBasic.wBitsPerSample / 8;
 	fmtBasic.nAvgBytesPerSec = fmtBasic.nBlockAlign * fmtBasic.nSamplesPerSec;
-	fmtBasic.wBitsPerSample  = fmt.Samples.wValidBitsPerSample;
 
 	return fmt;
 }
