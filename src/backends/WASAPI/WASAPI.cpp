@@ -54,11 +54,14 @@ const char *version() {
 		return nullptr;
 	}
 
+	const auto major = static_cast< uint16_t >((version->dwFileVersionMS >> 16) & 0xffff);
+	const auto minor = static_cast< uint16_t >((version->dwFileVersionMS >> 0) & 0xffff);
+	const auto build = static_cast< uint16_t >((version->dwFileVersionLS >> 16) & 0xffff);
+	const auto tweak = static_cast< uint16_t >((version->dwFileVersionLS >> 0) & 0xffff);
+
 	// Max: "65535.65535.65535.65535"
 	static char versionString[24];
-	sprintf(versionString, "%hu.%hu.%hu.%hu", (version->dwFileVersionMS >> 16) & 0xffff,
-			(version->dwFileVersionMS >> 0) & 0xffff, (version->dwFileVersionLS >> 16) & 0xffff,
-			(version->dwFileVersionLS >> 0) & 0xffff);
+	sprintf(versionString, "%hu.%hu.%hu.%hu", major, minor, build, tweak);
 
 	return versionString;
 }
@@ -255,6 +258,9 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 						case eAll:
 							node.direction = CROSSAUDIO_DIR_BOTH;
 							break;
+						default:
+							node.direction = CROSSAUDIO_DIR_NONE;
+							break;
 					}
 				}
 
@@ -424,10 +430,8 @@ const char *BE_Flux::nameGet() const {
 	return nullptr;
 }
 
-ErrorCode BE_Flux::nameSet(const char *name) {
+ErrorCode BE_Flux::nameSet(const char *) {
 	// TODO: Implement this.
-	(name);
-
 	return CROSSAUDIO_EC_OK;
 }
 
@@ -543,7 +547,7 @@ void BE_Flux::processOutput() {
 				flags |= AUDCLNT_BUFFERFLAGS_SILENT;
 			} else if (fluxData.frames < frames) {
 				if (fluxData.frames) {
-					memset(buffer + fluxData.frames, frames - fluxData.frames, 0);
+					memset(buffer + fluxData.frames, 0, frames - fluxData.frames);
 				} else {
 					frames = 0;
 				}

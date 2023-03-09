@@ -80,9 +80,9 @@ struct BE_Flux {
 	FluxFeedback m_feedback;
 
 	std::atomic_bool m_halt;
-	void *m_event;
 	IMMDevice *m_device;
 	IAudioClient3 *m_client;
+	void *m_event;
 
 	std::unique_ptr< std::thread > m_thread;
 
