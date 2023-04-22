@@ -363,6 +363,7 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	AudioClientProperties props{};
 	props.cbSize    = sizeof(props);
 	props.eCategory = category;
+	props.Options   = AUDCLNT_STREAMOPTIONS_MATCH_FORMAT;
 	m_client->IsOffloadCapable(category, &props.bIsOffload);
 
 	if (m_client->SetClientProperties(&props) != S_OK) {
