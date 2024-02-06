@@ -1,26 +1,6 @@
-/* Simple Plugin API
- *
- * Copyright © 2018 Wim Taymans
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
+/* Simple Plugin API */
+/* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef SPA_UTILS_DEFS_H
 #define SPA_UTILS_DEFS_H
@@ -28,18 +8,21 @@
 #ifdef __cplusplus
 extern "C" {
 # if __cplusplus >= 201103L
-#  define SPA_STATIC_ASSERT static_assert
+#  define SPA_STATIC_ASSERT_IMPL(expr, msg, ...) static_assert(expr, msg)
 # endif
 #else
 # include <stdbool.h>
 # if __STDC_VERSION__ >= 201112L
-#  define SPA_STATIC_ASSERT _Static_assert
+#  define SPA_STATIC_ASSERT_IMPL(expr, msg, ...) _Static_assert(expr, msg)
 # endif
 #endif
-#ifndef SPA_STATIC_ASSERT
-#define SPA_STATIC_ASSERT(a, b)						\
-	((void)sizeof(struct { int spa_static_assertion_failed : 2 * !!(a) - 1; }))
+#ifndef SPA_STATIC_ASSERT_IMPL
+#define SPA_STATIC_ASSERT_IMPL(expr, ...) \
+	((void)sizeof(struct { int spa_static_assertion_failed : 2 * !!(expr) - 1; }))
 #endif
+
+#define SPA_STATIC_ASSERT(expr, ...) SPA_STATIC_ASSERT_IMPL(expr, ## __VA_ARGS__, "`" #expr "` evaluated to false")
+
 #include <inttypes.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -82,7 +65,8 @@ extern "C" {
 #endif
 
 #define SPA_FLAG_MASK(field,mask,flag)	(((field) & (mask)) == (flag))
-#define SPA_FLAG_IS_SET(field,flag)	SPA_FLAG_MASK(field,flag,flag)
+#define SPA_FLAG_IS_SET(field,flag)	SPA_FLAG_MASK(field, flag, flag)
+
 #define SPA_FLAG_SET(field,flag)	((field) |= (flag))
 #define SPA_FLAG_CLEAR(field, flag)					\
 ({									\
@@ -140,21 +124,24 @@ struct spa_fraction {
 #define SPA_FOR_EACH_ELEMENT(arr, ptr) \
 	for ((ptr) = arr; (void*)(ptr) < SPA_PTROFF(arr, sizeof(arr), void); (ptr)++)
 
+#define SPA_FOR_EACH_ELEMENT_VAR(arr, var) \
+	for (__typeof__((arr)[0])* var = arr; (void*)(var) < SPA_PTROFF(arr, sizeof(arr), void); (var)++)
+
 #define SPA_ABS(a)			\
 ({					\
 	__typeof__(a) _a = (a);		\
 	SPA_LIKELY(_a >= 0) ? _a : -_a;	\
 })
-#define SPA_MIN(a,b)		\
-({				\
-	__typeof__(a) _min_a = (a);	\
-	__typeof__(b) _min_b = (b);	\
+#define SPA_MIN(a,b)					\
+({							\
+	__typeof__(a) _min_a = (a);			\
+	__typeof__(b) _min_b = (b);			\
 	SPA_LIKELY(_min_a <= _min_b) ? _min_a : _min_b;	\
 })
-#define SPA_MAX(a,b)		\
-({				\
-	__typeof__(a) _max_a = (a);	\
-	__typeof__(b) _max_b = (b);	\
+#define SPA_MAX(a,b)					\
+({							\
+	__typeof__(a) _max_a = (a);			\
+	__typeof__(b) _max_b = (b);			\
 	SPA_LIKELY(_max_a >= _max_b) ? _max_a : _max_b;	\
 })
 #define SPA_CLAMP(v,low,high)				\
@@ -174,7 +161,7 @@ struct spa_fraction {
 #define SPA_SWAP(a,b)					\
 ({							\
 	__typeof__(a) _t = (a);				\
-	(a) = b; (b) = _t;					\
+	(a) = b; (b) = _t;				\
 })
 
 #define SPA_TYPECHECK(type,x)		\
@@ -254,21 +241,29 @@ struct spa_fraction {
 #define SPA_RESTRICT
 #endif
 
-#define SPA_ROUND_DOWN(num,value)	((num) - ((num) % (value)))
-#define SPA_ROUND_UP(num,value)		((((num) + (value) - 1) / (value)) * (value))
-
-#define SPA_MASK_NEGATED(num1, num2)					\
-({									\
-	SPA_STATIC_ASSERT(__builtin_constant_p(num2) ?			\
-	              (__typeof__(num2))(__typeof__(num1))(__typeof__(num2))(num2) == (num2) : \
-		      sizeof(num1) >= sizeof(num2),			\
-			"truncation problem when masking " #num1	\
-			" with ~" #num2);				\
-	((num1) & ~(__typeof__(num1))(num2));				\
+#define SPA_ROUND_DOWN(num,value)		\
+({						\
+	__typeof__(num) _num = (num);		\
+	((_num) - ((_num) % (value)));		\
+})
+#define SPA_ROUND_UP(num,value)			\
+({						\
+	__typeof__(value) _v = (value);		\
+	((((num) + (_v) - 1) / (_v)) * (_v));	\
 })
 
-#define SPA_ROUND_DOWN_N(num,align)	SPA_MASK_NEGATED((num), (align) - 1)
-#define SPA_ROUND_UP_N(num,align)	SPA_ROUND_DOWN_N((num) + ((align) - 1),align)
+#define SPA_ROUND_MASK(num,mask)	((__typeof__(num))((mask)-1))
+
+#define SPA_ROUND_DOWN_N(num,align)	((num) & ~SPA_ROUND_MASK(num, align))
+#define SPA_ROUND_UP_N(num,align)	((((num)-1) | SPA_ROUND_MASK(num, align))+1)
+
+#define SPA_SCALE32_UP(val,num,denom)				\
+({								\
+	uint64_t _val = (val);					\
+	uint64_t _denom = (denom);				\
+	(uint32_t)(((_val) * (num) + (_denom)-1) / (_denom));	\
+})
+
 
 #define SPA_PTR_ALIGNMENT(p,align)	((intptr_t)(p) & ((align)-1))
 #define SPA_IS_ALIGNED(p,align)		(SPA_PTR_ALIGNMENT(p,align) == 0)

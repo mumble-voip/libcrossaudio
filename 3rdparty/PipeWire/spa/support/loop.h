@@ -1,26 +1,6 @@
-/* Simple Plugin API
- *
- * Copyright © 2018 Wim Taymans
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
+/* Simple Plugin API */
+/* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef SPA_LOOP_H
 #define SPA_LOOP_H
@@ -48,7 +28,7 @@ extern "C" {
 struct spa_loop { struct spa_interface iface; };
 
 #define SPA_TYPE_INTERFACE_LoopControl	SPA_TYPE_INFO_INTERFACE_BASE "LoopControl"
-#define SPA_VERSION_LOOP_CONTROL	0
+#define SPA_VERSION_LOOP_CONTROL	1
 struct spa_loop_control { struct spa_interface iface; };
 
 #define SPA_TYPE_INTERFACE_LoopUtils	SPA_TYPE_INFO_INTERFACE_BASE "LoopUtils"
@@ -143,7 +123,7 @@ struct spa_loop_control_hooks {
 	struct spa_hook_list *_l = l;							\
 	struct spa_hook *_h;								\
 	spa_list_for_each_reverse(_h, &_l->list, link)					\
-		spa_callbacks_call(&_h->cb, struct spa_loop_control_hooks, before, 0);	\
+		spa_callbacks_call_fast(&_h->cb, struct spa_loop_control_hooks, before, 0);	\
 })
 
 #define spa_loop_control_hook_after(l)							\
@@ -151,7 +131,7 @@ struct spa_loop_control_hooks {
 	struct spa_hook_list *_l = l;							\
 	struct spa_hook *_h;								\
 	spa_list_for_each(_h, &_l->list, link)						\
-		spa_callbacks_call(&_h->cb, struct spa_loop_control_hooks, after, 0);	\
+		spa_callbacks_call_fast(&_h->cb, struct spa_loop_control_hooks, after, 0);	\
 })
 
 /**
@@ -160,7 +140,7 @@ struct spa_loop_control_hooks {
 struct spa_loop_control_methods {
 	/* the version of this structure. This can be used to expand this
 	 * structure in the future */
-#define SPA_VERSION_LOOP_CONTROL_METHODS	0
+#define SPA_VERSION_LOOP_CONTROL_METHODS	1
 	uint32_t version;
 
 	int (*get_fd) (void *object);
@@ -202,6 +182,16 @@ struct spa_loop_control_methods {
 	 * The number of dispatched fds is returned.
 	 */
 	int (*iterate) (void *object, int timeout);
+
+	/** Check context of the loop
+	 * \param ctrl the control
+	 *
+	 * This function will check if the current thread is currently the
+	 * one that did the enter call. Since version 1:1.
+	 *
+	 * returns 1 on success, 0 or negative errno value on error.
+	 */
+	int (*check) (void *object);
 };
 
 #define spa_loop_control_method_v(o,method,version,...)			\
@@ -222,11 +212,24 @@ struct spa_loop_control_methods {
 	_res;								\
 })
 
+#define spa_loop_control_method_fast_r(o,method,version,...)		\
+({									\
+	int _res;							\
+	struct spa_loop_control *_o = o;				\
+	spa_interface_call_fast_res(&_o->iface,				\
+			struct spa_loop_control_methods, _res,		\
+			method, version, ##__VA_ARGS__);		\
+	_res;								\
+})
+
 #define spa_loop_control_get_fd(l)		spa_loop_control_method_r(l,get_fd,0)
 #define spa_loop_control_add_hook(l,...)	spa_loop_control_method_v(l,add_hook,0,__VA_ARGS__)
 #define spa_loop_control_enter(l)		spa_loop_control_method_v(l,enter,0)
 #define spa_loop_control_leave(l)		spa_loop_control_method_v(l,leave,0)
 #define spa_loop_control_iterate(l,...)		spa_loop_control_method_r(l,iterate,0,__VA_ARGS__)
+#define spa_loop_control_check(l)		spa_loop_control_method_r(l,check,1)
+
+#define spa_loop_control_iterate_fast(l,...)	spa_loop_control_method_fast_r(l,iterate,0,__VA_ARGS__)
 
 typedef void (*spa_source_io_func_t) (void *data, int fd, uint32_t mask);
 typedef void (*spa_source_idle_func_t) (void *data);

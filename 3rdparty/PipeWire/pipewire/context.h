@@ -1,26 +1,6 @@
-/* PipeWire
- *
- * Copyright © 2018 Wim Taymans
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
+/* PipeWire */
+/* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef PIPEWIRE_CONTEXT_H
 #define PIPEWIRE_CONTEXT_H
@@ -63,6 +43,7 @@ struct pw_context;
 
 struct pw_global;
 struct pw_impl_client;
+struct pw_impl_node;
 
 #include <pipewire/core.h>
 #include <pipewire/loop.h>
@@ -70,7 +51,7 @@ struct pw_impl_client;
 
 /** context events emitted by the context object added with \ref pw_context_add_listener */
 struct pw_context_events {
-#define PW_VERSION_CONTEXT_EVENTS	0
+#define PW_VERSION_CONTEXT_EVENTS	1
 	uint32_t version;
 
 	/** The context is being destroyed */
@@ -83,6 +64,11 @@ struct pw_context_events {
 	void (*global_added) (void *data, struct pw_global *global);
 	/** a global object was removed */
 	void (*global_removed) (void *data, struct pw_global *global);
+
+	/** a driver was added, since 0.3.75 version:1 */
+	void (*driver_added) (void *data, struct pw_impl_node *node);
+	/** a driver was removed, since 0.3.75 version:1 */
+	void (*driver_removed) (void *data, struct pw_impl_node *node);
 };
 
 /** Make a new context object for a given main_loop. Ownership of the properties is taken */
@@ -141,6 +127,9 @@ struct pw_data_loop *pw_context_get_data_loop(struct pw_context *context);
 
 /** Get the work queue from the context: Since 0.3.26 */
 struct pw_work_queue *pw_context_get_work_queue(struct pw_context *context);
+
+/** Get the memmory pool from the context: Since 0.3.74 */
+struct pw_mempool *pw_context_get_mempool(struct pw_context *context);
 
 /** Iterate the globals of the context. The callback should return
  * 0 to fetch the next item, any other value stops the iteration and returns

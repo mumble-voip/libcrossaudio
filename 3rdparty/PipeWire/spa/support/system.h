@@ -1,26 +1,6 @@
-/* Simple Plugin API
- *
- * Copyright © 2019 Wim Taymans
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
+/* Simple Plugin API */
+/* SPDX-FileCopyrightText: Copyright © 2019 Wim Taymans */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef SPA_SYSTEM_H
 #define SPA_SYSTEM_H
@@ -121,12 +101,11 @@ struct spa_system_methods {
 ({									\
 	volatile int _res = -ENOTSUP;					\
 	struct spa_system *_o = o;					\
-	spa_interface_call_res(&_o->iface,				\
+	spa_interface_call_fast_res(&_o->iface,				\
 			struct spa_system_methods, _res,		\
 			method, version, ##__VA_ARGS__);		\
 	_res;								\
 })
-
 
 #define spa_system_read(s,...)			spa_system_method_r(s,read,0,__VA_ARGS__)
 #define spa_system_write(s,...)			spa_system_method_r(s,write,0,__VA_ARGS__)

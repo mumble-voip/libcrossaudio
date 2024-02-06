@@ -1,3 +1,3 @@
-Version: `0.3.59`
+Version: `1.0.0`
 
-Commit: `f54a72fd9a67eeb8d1502d6d75979dbddb00fdf2`
+Commit: `4debdcd40b055b3eaa83a8f4443aa990ea566bfe`

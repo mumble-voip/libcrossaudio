@@ -13,7 +13,7 @@
 #include <memory>
 #include <utility>
 
-#include <spa/param/audio/format-utils.h>
+#include <spa/param/audio/raw-utils.h>
 #include <spa/pod/builder.h>
 #include <spa/utils/dict.h>
 

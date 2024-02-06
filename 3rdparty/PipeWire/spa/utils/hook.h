@@ -1,26 +1,6 @@
-/* Simple Plugin API
- *
- * Copyright © 2018 Wim Taymans
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
+/* Simple Plugin API */
+/* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
+/* SPDX-License-Identifier: MIT */
 
 #ifndef SPA_HOOK_H
 #define SPA_HOOK_H
@@ -166,7 +146,7 @@ struct spa_interface {
  *
  */
 #define SPA_INTERFACE_INIT(_type,_version,_funcs,_data) \
-	(struct spa_interface){ _type, _version, SPA_CALLBACKS_INIT(_funcs,_data), }
+	((struct spa_interface){ (_type), (_version), SPA_CALLBACKS_INIT(_funcs,_data), })
 
 /**
  * Invoke method named \a method in the \a callbacks.
@@ -181,6 +161,14 @@ struct spa_interface {
 		_f->method((callbacks)->data, ## __VA_ARGS__);			\
 	_res;									\
 })
+
+#define spa_callbacks_call_fast(callbacks,type,method,vers,...)			\
+({										\
+	const type *_f = (const type *) (callbacks)->funcs;			\
+	_f->method((callbacks)->data, ## __VA_ARGS__);				\
+	true;									\
+})
+
 
 /**
  * True if the \a callbacks are of version \a vers, false otherwise
@@ -214,6 +202,11 @@ struct spa_interface {
 		res = _f->method((callbacks)->data, ## __VA_ARGS__);		\
 	res;									\
 })
+#define spa_callbacks_call_fast_res(callbacks,type,res,method,vers,...)		\
+({										\
+	const type *_f = (const type *) (callbacks)->funcs;			\
+	res = _f->method((callbacks)->data, ## __VA_ARGS__);			\
+})
 
 /**
  * True if the \a iface's callbacks are of version \a vers, false otherwise
@@ -236,6 +229,9 @@ struct spa_interface {
 #define spa_interface_call(iface,method_type,method,vers,...)			\
 	spa_callbacks_call(&(iface)->cb,method_type,method,vers,##__VA_ARGS__)
 
+#define spa_interface_call_fast(iface,method_type,method,vers,...)		\
+	spa_callbacks_call_fast(&(iface)->cb,method_type,method,vers,##__VA_ARGS__)
+
 /**
  * Invoke method named \a method in the callbacks on the given interface object.
  * The \a method_type defines the type of the method struct, not the interface
@@ -245,6 +241,9 @@ struct spa_interface {
  */
 #define spa_interface_call_res(iface,method_type,res,method,vers,...)			\
 	spa_callbacks_call_res(&(iface)->cb,method_type,res,method,vers,##__VA_ARGS__)
+
+#define spa_interface_call_fast_res(iface,method_type,res,method,vers,...)		\
+	spa_callbacks_call_fast_res(&(iface)->cb,method_type,res,method,vers,##__VA_ARGS__)
 
 /**
  * \}
