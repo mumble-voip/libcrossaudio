@@ -23,13 +23,13 @@ typedef struct BE_Engine BE_Engine;
 typedef struct BE_Flux BE_Flux;
 
 typedef struct BE_Impl {
-	const char *(*name)();
-	const char *(*version)();
+	const char *(*name)(void);
+	const char *(*version)(void);
 
-	ErrorCode (*init)();
-	ErrorCode (*deinit)();
+	ErrorCode (*init)(void);
+	ErrorCode (*deinit)(void);
 
-	BE_Engine *(*engineNew)();
+	BE_Engine *(*engineNew)(void);
 	ErrorCode (*engineFree)(BE_Engine *engine);
 	ErrorCode (*engineStart)(BE_Engine *engine);
 	ErrorCode (*engineStop)(BE_Engine *engine);
