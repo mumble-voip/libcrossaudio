@@ -598,9 +598,9 @@ static constexpr spa_audio_format translateFormat(const CrossAudio_BitFormat for
 			break;
 		case CROSSAUDIO_BF_FLOAT:
 			switch (sampleBits) {
-				case 4:
+				case 32:
 					return SPA_AUDIO_FORMAT_F32;
-				case 8:
+				case 64:
 					return SPA_AUDIO_FORMAT_F64;
 			}
 
