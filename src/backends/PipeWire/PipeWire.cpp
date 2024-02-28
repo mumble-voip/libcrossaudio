@@ -446,7 +446,7 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 			return CROSSAUDIO_EC_GENERIC;
 	}
 
-	m_frameSize = sizeof(float) * config.channels;
+	m_frameSize = config.sampleBits / 8 * config.channels;
 
 	auto info = configToInfo(config);
 
