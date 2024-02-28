@@ -537,7 +537,15 @@ static void processOutput(void *userData) {
 
 	flux.m_feedback.process(flux.m_feedback.userData, &fluxData);
 
-	data->chunk->size   = fluxData.frames * flux.m_frameSize;
+	if (fluxData.frames) {
+		data->chunk->size = fluxData.frames * flux.m_frameSize;
+	} else {
+		// Telling PipeWire that we wrote 0 bytes results in an xrun,
+		// which in turn results in this function being called continuously.
+		memset(data->data, 0, data->maxsize);
+		data->chunk->size = data->maxsize;
+	}
+
 	data->chunk->stride = flux.m_frameSize;
 
 	lib.stream_queue_buffer(flux.m_stream, buf);
