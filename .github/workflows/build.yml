@@ -33,12 +33,13 @@ jobs:
 
       - uses: lukka/get-cmake@latest
 
-      - if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+      - uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 215a2535590f1f63788ac9bd2ed58ad15e6afdff
 
       - uses: lukka/run-cmake@v10
         with:
           configurePresetAdditionalArgs: "['-DCMAKE_C_COMPILER=${{matrix.cCompiler}}', '-DCMAKE_CXX_COMPILER=${{matrix.cppCompiler}}']"
-          configurePreset: 'ninja'
-          buildPreset: 'ninja'
-          testPreset: 'ninja'
+          configurePreset: 'ninja-vcpkg'
+          buildPreset: 'ninja-vcpkg'
+          testPreset: 'ninja-vcpkg'
