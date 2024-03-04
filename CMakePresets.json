@@ -9,8 +9,20 @@
     {
       "name": "ninja",
       "displayName": "Ninja",
-      "binaryDir": "${sourceDir}/build",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "generator": "Ninja"
+    },
+    {
+      "name": "ninja-vcpkg",
+      "displayName": "Ninja with vcpkg",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        }
+      }
     }
   ],
   "buildPresets": [
@@ -18,12 +30,21 @@
       "name": "ninja",
       "configurePreset": "ninja",
       "displayName": "Ninja"
+    },
+    {
+      "name": "ninja-vcpkg",
+      "configurePreset": "ninja-vcpkg",
+      "displayName": "Ninja with vcpkg"
     }
   ],
   "testPresets": [
     {
       "name": "ninja",
       "configurePreset": "ninja"
+    },
+    {
+      "name": "ninja-vcpkg",
+      "configurePreset": "ninja-vcpkg"
     }
   ]
 }
