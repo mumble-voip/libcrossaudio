@@ -4,8 +4,10 @@
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
 #include "Common.h"
+#include "Key.h"
 #include "RingBuffer.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -104,7 +106,24 @@ int main(const int argc, const char *argv[]) {
 		goto FINAL;
 	}
 
-	getchar();
+	bool halt   = false;
+	bool paused = false;
+
+	while (!halt) {
+		switch (getKey()) {
+			case KEY_BREAK:
+				halt = true;
+				break;
+			case KEY_PAUSE:
+				paused = !paused;
+				CrossAudio_fluxPause(streams[0], paused);
+				CrossAudio_fluxPause(streams[1], paused);
+
+				printf("Paused: %s\n", paused ? "true" : "false");
+			default:
+				break;
+		}
+	}
 FINAL:
 	if (!destroyStream(streams[0]) || !destroyStream(streams[1])) {
 		return 5;

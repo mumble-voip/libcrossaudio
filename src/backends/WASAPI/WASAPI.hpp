@@ -72,6 +72,7 @@ struct BE_Flux {
 
 	ErrorCode start(FluxConfig &config, const FluxFeedback &feedback);
 	ErrorCode stop();
+	ErrorCode pause(bool on);
 
 	void processInput();
 	void processOutput();

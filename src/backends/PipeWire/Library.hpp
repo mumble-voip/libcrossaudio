@@ -55,6 +55,7 @@ public:
 	int (*stream_connect)(pw_stream *stream, uint32_t direction, uint32_t target_id, uint32_t flags,
 						  const spa_pod **params, uint32_t n_params);
 	int (*stream_disconnect)(pw_stream *stream);
+	int (*stream_set_active)(pw_stream *stream, bool active);
 	pw_buffer *(*stream_dequeue_buffer)(pw_stream *stream);
 	int (*stream_queue_buffer)(pw_stream *stream, pw_buffer *buffer);
 	const pw_properties *(*stream_get_properties)(pw_stream *stream);

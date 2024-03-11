@@ -152,6 +152,10 @@ ErrorCode fluxStop(BE_Flux *flux) {
 	return flux->stop();
 }
 
+ErrorCode fluxPause(BE_Flux *flux, const bool on) {
+	return flux->pause(on);
+}
+
 const char *fluxNameGet(BE_Flux *flux) {
 	return flux->nameGet();
 }
@@ -181,6 +185,7 @@ const BE_Impl WASAPI_Impl = {
 	fluxFree,
 	fluxStart,
 	fluxStop,
+	fluxPause,
 	fluxNameGet,
 	fluxNameSet
 };
@@ -424,6 +429,23 @@ ErrorCode BE_Flux::stop() {
 	}
 
 	return CROSSAUDIO_EC_OK;
+}
+
+ErrorCode BE_Flux::pause(const bool on) {
+	if (!m_client) {
+		return CROSSAUDIO_EC_INIT;
+	}
+
+	switch (on ? m_client->Stop() : m_client->Start()) {
+		case S_OK:
+		case S_FALSE:
+		case AUDCLNT_E_NOT_STOPPED:
+			return CROSSAUDIO_EC_OK;
+		case AUDCLNT_E_DEVICE_INVALIDATED:
+			return CROSSAUDIO_EC_INIT;
+		default:
+			return CROSSAUDIO_EC_GENERIC;
+	}
 }
 
 const char *BE_Flux::nameGet() const {

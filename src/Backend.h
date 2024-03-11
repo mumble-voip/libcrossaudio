@@ -42,6 +42,7 @@ typedef struct BE_Impl {
 	ErrorCode (*fluxFree)(BE_Flux *flux);
 	ErrorCode (*fluxStart)(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback);
 	ErrorCode (*fluxStop)(BE_Flux *flux);
+	ErrorCode (*fluxPause)(BE_Flux *flux, bool on);
 	const char *(*fluxNameGet)(BE_Flux *flux);
 	ErrorCode (*fluxNameSet)(BE_Flux *flux, const char *name);
 } BE_Impl;

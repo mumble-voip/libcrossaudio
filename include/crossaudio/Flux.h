@@ -12,6 +12,7 @@
 #include "ErrorCode.h"
 #include "Macros.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define CROSSAUDIO_FLUX_DEFAULT_NODE ("")
@@ -53,6 +54,7 @@ CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxStart(struct CrossAud
 																 struct CrossAudio_FluxConfig *config,
 																 const struct CrossAudio_FluxFeedback *feedback);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxStop(struct CrossAudio_Flux *flux);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxPause(struct CrossAudio_Flux *flux, bool on);
 
 CROSSAUDIO_EXPORT const char *CrossAudio_fluxNameGet(struct CrossAudio_Flux *flux);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_fluxNameSet(struct CrossAudio_Flux *flux, const char *name);

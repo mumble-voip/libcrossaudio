@@ -50,6 +50,7 @@ ErrorCode Library::load(const std::string_view libraryName) {
 	LOAD_SYM(stream_destroy)
 	LOAD_SYM(stream_connect)
 	LOAD_SYM(stream_disconnect)
+	LOAD_SYM(stream_set_active)
 	LOAD_SYM(stream_dequeue_buffer)
 	LOAD_SYM(stream_queue_buffer)
 	LOAD_SYM(stream_get_properties)

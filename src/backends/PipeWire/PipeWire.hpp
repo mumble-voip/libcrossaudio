@@ -99,6 +99,7 @@ struct BE_Flux {
 
 	ErrorCode start(FluxConfig &config, const FluxFeedback &feedback);
 	ErrorCode stop();
+	ErrorCode pause(bool on);
 
 	BE_Engine &m_engine;
 	FluxFeedback m_feedback;

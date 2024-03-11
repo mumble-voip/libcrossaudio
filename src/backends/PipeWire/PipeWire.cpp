@@ -134,6 +134,10 @@ ErrorCode fluxStop(BE_Flux *flux) {
 	return flux->stop();
 }
 
+ErrorCode fluxPause(BE_Flux *flux, const bool on) {
+	return flux->pause(on);
+}
+
 const char *fluxNameGet(BE_Flux *flux) {
 	return flux->nameGet();
 }
@@ -163,6 +167,7 @@ constexpr BE_Impl PipeWire_Impl = {
 	fluxFree,
 	fluxStart,
 	fluxStop,
+	fluxPause,
 	fluxNameGet,
 	fluxNameSet
 };
@@ -479,6 +484,14 @@ ErrorCode BE_Flux::stop() {
 
 	lib.stream_disconnect(m_stream);
 	spa_hook_remove(&m_listener);
+
+	return CROSSAUDIO_EC_OK;
+}
+
+ErrorCode BE_Flux::pause(const bool on) {
+	const auto lock = m_engine.locker();
+
+	lib.stream_set_active(m_stream, !on);
 
 	return CROSSAUDIO_EC_OK;
 }

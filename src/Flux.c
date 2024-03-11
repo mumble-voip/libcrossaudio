@@ -48,6 +48,10 @@ ErrorCode CrossAudio_fluxStop(Flux *flux) {
 	return flux->beImpl->fluxStop(flux->beData);
 }
 
+ErrorCode CrossAudio_fluxPause(Flux *flux, const bool on) {
+	return flux->beImpl->fluxPause(flux->beData, on);
+}
+
 const char *CrossAudio_fluxNameGet(Flux *flux) {
 	return flux->beImpl->fluxNameGet(flux->beData);
 }
