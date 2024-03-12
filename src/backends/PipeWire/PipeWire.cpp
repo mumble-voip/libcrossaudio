@@ -26,15 +26,15 @@ using FluxData = CrossAudio_FluxData;
 
 static Library lib;
 
-const char *name() {
+static const char *name() {
 	return "PipeWire";
 }
 
-const char *version() {
+static const char *version() {
 	return lib.get_library_version();
 }
 
-ErrorCode init() {
+static ErrorCode init() {
 	// clang-format off
 	constexpr std::string_view names[] = {
 		"libpipewire.so",
@@ -59,14 +59,14 @@ ErrorCode init() {
 	return ret;
 }
 
-ErrorCode deinit() {
+static ErrorCode deinit() {
 	lib.deinit();
 	lib.unload();
 
 	return CROSSAUDIO_EC_OK;
 }
 
-BE_Engine *engineNew() {
+static BE_Engine *engineNew() {
 	if (auto engine = new BE_Engine()) {
 		if (*engine) {
 			return engine;
@@ -78,37 +78,37 @@ BE_Engine *engineNew() {
 	return nullptr;
 }
 
-ErrorCode engineFree(BE_Engine *engine) {
+static ErrorCode engineFree(BE_Engine *engine) {
 	delete engine;
 
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode engineStart(BE_Engine *engine) {
+static ErrorCode engineStart(BE_Engine *engine) {
 	return engine->start();
 }
 
-ErrorCode engineStop(BE_Engine *engine) {
+static ErrorCode engineStop(BE_Engine *engine) {
 	return engine->stop();
 }
 
-const char *engineNameGet(BE_Engine *engine) {
+static const char *engineNameGet(BE_Engine *engine) {
 	return engine->nameGet();
 }
 
-ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
+static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return engine->nameSet(name);
 }
 
-Node *engineNodesGet(BE_Engine *engine) {
+static Node *engineNodesGet(BE_Engine *engine) {
 	return engine->engineNodesGet();
 }
 
-ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
+static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
 	return engine->engineNodesFree(nodes);
 }
 
-BE_Flux *fluxNew(BE_Engine *engine) {
+static BE_Flux *fluxNew(BE_Engine *engine) {
 	if (auto flux = new BE_Flux(*engine)) {
 		if (*flux) {
 			return flux;
@@ -120,29 +120,29 @@ BE_Flux *fluxNew(BE_Engine *engine) {
 	return nullptr;
 }
 
-ErrorCode fluxFree(BE_Flux *flux) {
+static ErrorCode fluxFree(BE_Flux *flux) {
 	delete flux;
 
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
+static ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
 	return flux->start(*config, feedback ? *feedback : FluxFeedback());
 }
 
-ErrorCode fluxStop(BE_Flux *flux) {
+static ErrorCode fluxStop(BE_Flux *flux) {
 	return flux->stop();
 }
 
-ErrorCode fluxPause(BE_Flux *flux, const bool on) {
+static ErrorCode fluxPause(BE_Flux *flux, const bool on) {
 	return flux->pause(on);
 }
 
-const char *fluxNameGet(BE_Flux *flux) {
+static const char *fluxNameGet(BE_Flux *flux) {
 	return flux->nameGet();
 }
 
-ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
+static ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
 	return flux->nameSet(name);
 }
 

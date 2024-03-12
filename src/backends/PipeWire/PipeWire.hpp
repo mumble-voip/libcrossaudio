@@ -116,28 +116,6 @@ private:
 
 extern const BE_Impl PipeWire_Impl;
 
-static const char *name();
-static const char *version();
-
-static ErrorCode init();
-static ErrorCode deinit();
-
-static BE_Engine *engineNew();
-static ErrorCode engineFree(BE_Engine *engine);
-static ErrorCode engineStart(BE_Engine *engine);
-static ErrorCode engineStop(BE_Engine *engine);
-static const char *engineNameGet(BE_Engine *engine);
-static ErrorCode engineNameSet(BE_Engine *engine, const char *name);
-static Node *engineNodesGet(BE_Engine *engine);
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes);
-
-static BE_Flux *fluxNew(BE_Engine *engine);
-static ErrorCode fluxFree(BE_Flux *flux);
-static ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback);
-static ErrorCode fluxStop(BE_Flux *flux);
-static const char *fluxNameGet(BE_Flux *flux);
-static ErrorCode fluxNameSet(BE_Flux *flux, const char *name);
-
 // Internal functions
 
 static void processInput(void *userData);
