@@ -12,6 +12,10 @@
 
 #include <stddef.h>
 
+#define GET_BACKEND(name) \
+	extern const BE_Impl name##_Impl; \
+	return &name##_Impl;
+
 typedef enum CrossAudio_Backend Backend;
 typedef enum CrossAudio_ErrorCode ErrorCode;
 
@@ -50,39 +54,59 @@ typedef struct BE_Impl {
 static inline const BE_Impl *backendGetImpl(const Backend backend) {
 	switch (backend) {
 		case CROSSAUDIO_BACKEND_DUMMY: {
-			// extern Backend_Impl Dummy_Impl;
-			// return &Dummy_Impl;
+#ifdef HAS_DUMMY
+			GET_BACKEND(Dummy)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_ALSA: {
-			// extern Backend_Impl ALSA_Impl;
-			// return &ALSA_Impl;
+#ifdef HAS_ALSA
+			GET_BACKEND(ALSA)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_OSS: {
-			// extern Backend_Impl OSS_Impl;
-			// return &OSS_Impl;
+#ifdef HAS_OSS
+			GET_BACKEND(OSS)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_WASAPI: {
 #ifdef HAS_WASAPI
-			extern const BE_Impl WASAPI_Impl;
-			return &WASAPI_Impl;
+			GET_BACKEND(WASAPI)
+#else
+			return NULL;
 #endif
 		}
 		case CROSSAUDIO_BACKEND_COREAUDIO: {
-			// extern Backend_Impl CoreAudio_Impl;
-			// return &CoreAudio_Impl;
+#ifdef HAS_COREAUDIO
+			GET_BACKEND(CoreAudio)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_PULSEAUDIO: {
-			// extern Backend_Impl PulseAudio_Impl;
-			// return &PulseAudio_Impl;
+#ifdef HAS_PULSEAUDIO
+			GET_BACKEND(PulseAudio)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_JACKAUDIO: {
-			// extern Backend_Impl JackAudio_Impl;
-			// return &JackAudio_Impl;
+#ifdef HAS_JACKAUDIO
+			GET_BACKEND(JackAudio)
+#else
+			return NULL;
+#endif
 		}
 		case CROSSAUDIO_BACKEND_PIPEWIRE: {
 #ifdef HAS_PIPEWIRE
-			extern const BE_Impl PipeWire_Impl;
-			return &PipeWire_Impl;
+			GET_BACKEND(PipeWire)
+#else
+			return NULL;
 #endif
 		}
 	}
