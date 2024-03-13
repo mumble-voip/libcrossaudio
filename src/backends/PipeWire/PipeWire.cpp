@@ -22,9 +22,19 @@
 #include <pipewire/node.h>
 #include <pipewire/stream.h>
 
+using namespace pipewire;
+
 using FluxData = CrossAudio_FluxData;
 
 static Library lib;
+
+static auto toImpl(BE_Engine *engine) {
+	return reinterpret_cast< Engine * >(engine);
+}
+
+static auto toImpl(BE_Flux *flux) {
+	return reinterpret_cast< Flux * >(flux);
+}
 
 static const char *name() {
 	return "PipeWire";
@@ -67,9 +77,9 @@ static ErrorCode deinit() {
 }
 
 static BE_Engine *engineNew() {
-	if (auto engine = new BE_Engine()) {
+	if (auto engine = new Engine()) {
 		if (*engine) {
-			return engine;
+			return reinterpret_cast< BE_Engine * >(engine);
 		}
 
 		delete engine;
@@ -79,39 +89,39 @@ static BE_Engine *engineNew() {
 }
 
 static ErrorCode engineFree(BE_Engine *engine) {
-	delete engine;
+	delete toImpl(engine);
 
 	return CROSSAUDIO_EC_OK;
 }
 
 static ErrorCode engineStart(BE_Engine *engine) {
-	return engine->start();
+	return toImpl(engine)->start();
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
-	return engine->stop();
+	return toImpl(engine)->stop();
 }
 
 static const char *engineNameGet(BE_Engine *engine) {
-	return engine->nameGet();
+	return toImpl(engine)->nameGet();
 }
 
 static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
-	return engine->nameSet(name);
+	return toImpl(engine)->nameSet(name);
 }
 
 static Node *engineNodesGet(BE_Engine *engine) {
-	return engine->engineNodesGet();
+	return toImpl(engine)->engineNodesGet();
 }
 
 static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return engine->engineNodesFree(nodes);
+	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *engine) {
-	if (auto flux = new BE_Flux(*engine)) {
+	if (auto flux = new Flux(*toImpl(engine))) {
 		if (*flux) {
-			return flux;
+			return reinterpret_cast< BE_Flux * >(flux);
 		}
 
 		delete flux;
@@ -121,29 +131,29 @@ static BE_Flux *fluxNew(BE_Engine *engine) {
 }
 
 static ErrorCode fluxFree(BE_Flux *flux) {
-	delete flux;
+	delete toImpl(flux);
 
 	return CROSSAUDIO_EC_OK;
 }
 
 static ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
-	return flux->start(*config, feedback ? *feedback : FluxFeedback());
+	return toImpl(flux)->start(*config, feedback ? *feedback : FluxFeedback());
 }
 
 static ErrorCode fluxStop(BE_Flux *flux) {
-	return flux->stop();
+	return toImpl(flux)->stop();
 }
 
 static ErrorCode fluxPause(BE_Flux *flux, const bool on) {
-	return flux->pause(on);
+	return toImpl(flux)->pause(on);
 }
 
 static const char *fluxNameGet(BE_Flux *flux) {
-	return flux->nameGet();
+	return toImpl(flux)->nameGet();
 }
 
 static ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
-	return flux->nameSet(name);
+	return toImpl(flux)->nameSet(name);
 }
 
 // clang-format off
@@ -180,17 +190,17 @@ static constexpr pw_registry_events eventsRegistry = {
 	[](void *userData, const uint32_t id, const uint32_t /*permissions*/, const char *type, const uint32_t /*version*/,
 	   const spa_dict *props) {
 		if (spa_streq(type, NODE_TYPE_ID)) {
-			static_cast< BE_Engine * >(userData)->addNode(id, props);
+			static_cast< Engine * >(userData)->addNode(id, props);
 		}
 	},
-	[](void *userData, const uint32_t id) { static_cast< BE_Engine * >(userData)->removeNode(id); }
+	[](void *userData, const uint32_t id) { static_cast< Engine * >(userData)->removeNode(id); }
 };
 
 static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
 											   [](void *userData, const pw_node_info *info) {
-												   auto &node= *static_cast< BE_Engine::Node*                    >(userData);
+												   auto &node = *static_cast< Engine::Node*                    >(userData);
 
-												   uint8_t direction= CROSSAUDIO_DIR_NONE;
+												   uint8_t direction = CROSSAUDIO_DIR_NONE;
 												   if (info->n_input_ports > 0) {
 													   direction |= CROSSAUDIO_DIR_OUT;
 												   }
@@ -198,17 +208,17 @@ static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
 													   direction |= CROSSAUDIO_DIR_IN;
 												   }
 
-												   node.direction= static_cast< Direction >(direction);
+												   node.direction = static_cast< Direction >(direction);
 											   },
 											   nullptr };
 
-BE_Engine::BE_Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
+Engine::Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
 	if ((m_threadLoop = lib.thread_loop_new(nullptr, nullptr))) {
 		m_context = lib.context_new(lib.thread_loop_get_loop(m_threadLoop), nullptr, 0);
 	}
 }
 
-BE_Engine::~BE_Engine() {
+Engine::~Engine() {
 	stop();
 
 	if (m_context) {
@@ -221,19 +231,19 @@ BE_Engine::~BE_Engine() {
 	}
 }
 
-void BE_Engine::lock() {
+void Engine::lock() {
 	if (m_threadLoop) {
 		lib.thread_loop_lock(m_threadLoop);
 	}
 }
 
-void BE_Engine::unlock() {
+void Engine::unlock() {
 	if (m_threadLoop) {
 		lib.thread_loop_unlock(m_threadLoop);
 	}
 }
 
-ErrorCode BE_Engine::start() {
+ErrorCode Engine::start() {
 	if (m_core) {
 		return CROSSAUDIO_EC_INIT;
 	}
@@ -253,7 +263,7 @@ ErrorCode BE_Engine::start() {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Engine::stop() {
+ErrorCode Engine::stop() {
 	lock();
 
 	spa_hook_remove(&m_registryListener);
@@ -278,7 +288,7 @@ ErrorCode BE_Engine::stop() {
 	return CROSSAUDIO_EC_OK;
 }
 
-const char *BE_Engine::nameGet() const {
+const char *Engine::nameGet() const {
 	if (const auto props = m_core ? lib.core_get_properties(m_core) : lib.context_get_properties(m_context)) {
 		return lib.properties_get(props, PW_KEY_APP_NAME);
 	}
@@ -286,7 +296,7 @@ const char *BE_Engine::nameGet() const {
 	return nullptr;
 }
 
-ErrorCode BE_Engine::nameSet(const char *name) {
+ErrorCode Engine::nameSet(const char *name) {
 	const spa_dict_item items[] = { { PW_KEY_APP_NAME, name } };
 	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
 
@@ -300,7 +310,7 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
 
-::Node *BE_Engine::engineNodesGet() {
+::Node *Engine::engineNodesGet() {
 	const auto lock = locker();
 
 	auto nodes = static_cast< ::Node * >(calloc(m_nodes.size() + 1, sizeof(::Node)));
@@ -323,7 +333,7 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 	return nodes;
 }
 
-ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
+ErrorCode Engine::engineNodesFree(::Node *nodes) {
 	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
 		auto &node = nodes[i];
 		if (!node.id) {
@@ -339,7 +349,7 @@ ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
 	return CROSSAUDIO_EC_OK;
 }
 
-void BE_Engine::addNode(const uint32_t id, const spa_dict *props) {
+void Engine::addNode(const uint32_t id, const spa_dict *props) {
 	const char *serialStr = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL);
 	if (!serialStr) {
 		return;
@@ -369,22 +379,22 @@ void BE_Engine::addNode(const uint32_t id, const spa_dict *props) {
 	}
 }
 
-void BE_Engine::removeNode(const uint32_t id) {
+void Engine::removeNode(const uint32_t id) {
 	const auto lock = locker();
 
 	m_nodes.erase(id);
 }
 
-BE_Engine::Node::Node(Node &&node)
+Engine::Node::Node(Node &&node)
 	: proxy(std::exchange(node.proxy, nullptr)), listener(std::exchange(node.listener, {})), serial(node.serial),
 	  name(std::move(node.name)), direction(node.direction) {
 }
 
-BE_Engine::Node::Node(pw_proxy *proxy, const uint32_t serial, const char *name)
+Engine::Node::Node(pw_proxy *proxy, const uint32_t serial, const char *name)
 	: proxy(proxy), listener(), serial(serial), name(name), direction(CROSSAUDIO_DIR_NONE) {
 }
 
-BE_Engine::Node::~Node() {
+Engine::Node::~Node() {
 	spa_hook_remove(&listener);
 
 	if (proxy) {
@@ -417,21 +427,21 @@ static constexpr pw_stream_events eventsOutput = { PW_VERSION_STREAM_EVENTS,
 												   nullptr,
 												   nullptr };
 
-BE_Flux::BE_Flux(BE_Engine &engine) : m_engine(engine), m_stream(nullptr), m_frameSize(0) {
+Flux::Flux(Engine &engine) : m_engine(engine), m_stream(nullptr), m_frameSize(0) {
 	if (engine.m_core) {
 		const auto lock = engine.locker();
 		m_stream        = lib.stream_new(engine.m_core, nullptr, nullptr);
 	}
 }
 
-BE_Flux::~BE_Flux() {
+Flux::~Flux() {
 	if (m_stream) {
 		const auto lock = m_engine.locker();
 		lib.stream_destroy(m_stream);
 	}
 }
 
-ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
+ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	if (lib.stream_get_state(m_stream, nullptr) != PW_STREAM_STATE_UNCONNECTED) {
 		return CROSSAUDIO_EC_INIT;
 	}
@@ -479,7 +489,7 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Flux::stop() {
+ErrorCode Flux::stop() {
 	const auto lock = m_engine.locker();
 
 	lib.stream_disconnect(m_stream);
@@ -488,7 +498,7 @@ ErrorCode BE_Flux::stop() {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Flux::pause(const bool on) {
+ErrorCode Flux::pause(const bool on) {
 	const auto lock = m_engine.locker();
 
 	lib.stream_set_active(m_stream, !on);
@@ -496,7 +506,7 @@ ErrorCode BE_Flux::pause(const bool on) {
 	return CROSSAUDIO_EC_OK;
 }
 
-const char *BE_Flux::nameGet() const {
+const char *Flux::nameGet() const {
 	if (const auto props = lib.stream_get_properties(m_stream)) {
 		return lib.properties_get(props, PW_KEY_NODE_NAME);
 	}
@@ -504,7 +514,7 @@ const char *BE_Flux::nameGet() const {
 	return nullptr;
 }
 
-ErrorCode BE_Flux::nameSet(const char *name) {
+ErrorCode Flux::nameSet(const char *name) {
 	const spa_dict_item items[] = { { PW_KEY_NODE_NAME, name } };
 	const spa_dict dict         = SPA_DICT_INIT_ARRAY(items);
 
@@ -514,7 +524,7 @@ ErrorCode BE_Flux::nameSet(const char *name) {
 }
 
 static void processInput(void *userData) {
-	auto &flux = *static_cast< BE_Flux * >(userData);
+	auto &flux = *static_cast< Flux * >(userData);
 
 	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {
@@ -534,7 +544,7 @@ static void processInput(void *userData) {
 }
 
 static void processOutput(void *userData) {
-	auto &flux = *static_cast< BE_Flux * >(userData);
+	auto &flux = *static_cast< Flux * >(userData);
 
 	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {

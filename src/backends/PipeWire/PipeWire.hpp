@@ -29,14 +29,16 @@ using Node      = CrossAudio_Node;
 
 struct spa_audio_info_raw;
 
-struct BE_Engine {
+namespace pipewire {
+class Engine {
+public:
 	class Locker {
 	public:
-		Locker(BE_Engine &engine) : m_engine(engine) { m_engine.lock(); }
+		Locker(Engine &engine) : m_engine(engine) { m_engine.lock(); }
 		~Locker() { m_engine.unlock(); };
 
 	private:
-		BE_Engine &m_engine;
+		Engine &m_engine;
 	};
 
 	struct Node {
@@ -53,8 +55,8 @@ struct BE_Engine {
 		Direction direction;
 	};
 
-	BE_Engine();
-	~BE_Engine();
+	Engine();
+	~Engine();
 
 	constexpr operator bool() const { return m_threadLoop && m_context; }
 
@@ -82,15 +84,16 @@ struct BE_Engine {
 	spa_hook m_registryListener;
 
 private:
-	BE_Engine(const BE_Engine &)            = delete;
-	BE_Engine &operator=(const BE_Engine &) = delete;
+	Engine(const Engine &)            = delete;
+	Engine &operator=(const Engine &) = delete;
 
 	std::map< uint32_t, Node > m_nodes;
 };
 
-struct BE_Flux {
-	BE_Flux(BE_Engine &engine);
-	~BE_Flux();
+class Flux {
+public:
+	Flux(Engine &engine);
+	~Flux();
 
 	constexpr operator bool() const { return m_stream; }
 
@@ -101,16 +104,17 @@ struct BE_Flux {
 	ErrorCode stop();
 	ErrorCode pause(bool on);
 
-	BE_Engine &m_engine;
+	Engine &m_engine;
 	FluxFeedback m_feedback;
 	spa_hook m_listener;
 	pw_stream *m_stream;
 	uint32_t m_frameSize;
 
 private:
-	BE_Flux(const BE_Flux &)            = delete;
-	BE_Flux &operator=(const BE_Flux &) = delete;
+	Flux(const Flux &)            = delete;
+	Flux &operator=(const Flux &) = delete;
 };
+} // namespace pipewire
 
 // Backend API
 

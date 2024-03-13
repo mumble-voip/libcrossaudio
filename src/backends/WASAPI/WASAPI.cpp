@@ -19,11 +19,21 @@
 #include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
 
+using namespace wasapi;
+
 using Direction = CrossAudio_Direction;
 using FluxData  = CrossAudio_FluxData;
 
 static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &config);
 static FluxConfig waveFormatToConfig(const char *node, const Direction direction, const WAVEFORMATEXTENSIBLE &fmt);
+
+static auto toImpl(BE_Engine *engine) {
+	return reinterpret_cast< Engine * >(engine);
+}
+
+static auto toImpl(BE_Flux *flux) {
+	return reinterpret_cast< Flux * >(flux);
+}
 
 static const char *name() {
 	return "WASAPI";
@@ -84,9 +94,9 @@ static ErrorCode deinit() {
 }
 
 static BE_Engine *engineNew() {
-	if (auto engine = new BE_Engine()) {
+	if (auto engine = new Engine()) {
 		if (*engine) {
-			return engine;
+			return reinterpret_cast< BE_Engine * >(engine);
 		}
 
 		delete engine;
@@ -97,39 +107,39 @@ static BE_Engine *engineNew() {
 
 
 static ErrorCode engineFree(BE_Engine *engine) {
-	delete engine;
+	delete toImpl(engine);
 
 	return CROSSAUDIO_EC_OK;
 }
 
 static ErrorCode engineStart(BE_Engine *engine) {
-	return engine->start();
+	return toImpl(engine)->start();
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
-	return engine->stop();
+	return toImpl(engine)->stop();
 }
 
 static const char *engineNameGet(BE_Engine *engine) {
-	return engine->nameGet();
+	return toImpl(engine)->nameGet();
 }
 
 static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
-	return engine->nameSet(name);
+	return toImpl(engine)->nameSet(name);
 }
 
 static Node *engineNodesGet(BE_Engine *engine) {
-	return engine->engineNodesGet();
+	return toImpl(engine)->engineNodesGet();
 }
 
 static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return engine->engineNodesFree(nodes);
+	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *engine) {
-	if (auto flux = new BE_Flux(*engine)) {
+	if (auto flux = new Flux(*toImpl(engine))) {
 		if (*flux) {
-			return flux;
+			return reinterpret_cast< BE_Flux * >(flux);
 		}
 
 		delete flux;
@@ -139,29 +149,29 @@ static BE_Flux *fluxNew(BE_Engine *engine) {
 }
 
 static ErrorCode fluxFree(BE_Flux *flux) {
-	delete flux;
+	delete toImpl(flux);
 
 	return CROSSAUDIO_EC_OK;
 }
 
 static ErrorCode fluxStart(BE_Flux *flux, FluxConfig *config, const FluxFeedback *feedback) {
-	return flux->start(*config, feedback ? *feedback : FluxFeedback());
+	return toImpl(flux)->start(*config, feedback ? *feedback : FluxFeedback());
 }
 
 static ErrorCode fluxStop(BE_Flux *flux) {
-	return flux->stop();
+	return toImpl(flux)->stop();
 }
 
 static ErrorCode fluxPause(BE_Flux *flux, const bool on) {
-	return flux->pause(on);
+	return toImpl(flux)->pause(on);
 }
 
 static const char *fluxNameGet(BE_Flux *flux) {
-	return flux->nameGet();
+	return toImpl(flux)->nameGet();
 }
 
 static ErrorCode fluxNameSet(BE_Flux *flux, const char *name) {
-	return flux->nameSet(name);
+	return toImpl(flux)->nameSet(name);
 }
 
 // clang-format off
@@ -191,38 +201,38 @@ const BE_Impl WASAPI_Impl = {
 };
 // clang-format on
 
-BE_Engine::BE_Engine() : m_enumerator(nullptr) {
+Engine::Engine() : m_enumerator(nullptr) {
 	CoCreateGuid(reinterpret_cast< GUID * >(&m_sessionID));
 
 	CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
 					 reinterpret_cast< void ** >(&m_enumerator));
 }
 
-BE_Engine::~BE_Engine() {
+Engine::~Engine() {
 	if (m_enumerator) {
 		m_enumerator->Release();
 	}
 }
 
-ErrorCode BE_Engine::start() {
+ErrorCode Engine::start() {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Engine::stop() {
+ErrorCode Engine::stop() {
 	return CROSSAUDIO_EC_OK;
 }
 
-const char *BE_Engine::nameGet() const {
+const char *Engine::nameGet() const {
 	return m_name.data();
 }
 
-ErrorCode BE_Engine::nameSet(const char *name) {
+ErrorCode Engine::nameSet(const char *name) {
 	m_name = name;
 
 	return CROSSAUDIO_EC_OK;
 }
 
-::Node *BE_Engine::engineNodesGet() {
+::Node *Engine::engineNodesGet() {
 	IMMDeviceCollection *collection;
 	if (m_enumerator->EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE, &collection) != S_OK) {
 		return nullptr;
@@ -291,7 +301,7 @@ ErrorCode BE_Engine::nameSet(const char *name) {
 	return nodes;
 }
 
-ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
+ErrorCode Engine::engineNodesFree(::Node *nodes) {
 	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
 		auto &node = nodes[i];
 		if (!node.id) {
@@ -307,12 +317,12 @@ ErrorCode BE_Engine::engineNodesFree(::Node *nodes) {
 	return CROSSAUDIO_EC_OK;
 }
 
-BE_Flux::BE_Flux(BE_Engine &engine)
+Flux::Flux(Engine &engine)
 	: m_engine(engine), m_feedback(), m_device(nullptr), m_client(nullptr),
 	  m_event(CreateEvent(nullptr, false, false, nullptr)) {
 }
 
-BE_Flux::~BE_Flux() {
+Flux::~Flux() {
 	stop();
 
 	if (m_event) {
@@ -320,7 +330,7 @@ BE_Flux::~BE_Flux() {
 	}
 }
 
-ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
+ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	constexpr auto role     = eCommunications;
 	constexpr auto category = AudioCategory_Communications;
 
@@ -409,7 +419,7 @@ ErrorCode BE_Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Flux::stop() {
+ErrorCode Flux::stop() {
 	m_halt = true;
 	SetEvent(m_event);
 
@@ -431,7 +441,7 @@ ErrorCode BE_Flux::stop() {
 	return CROSSAUDIO_EC_OK;
 }
 
-ErrorCode BE_Flux::pause(const bool on) {
+ErrorCode Flux::pause(const bool on) {
 	if (!m_client) {
 		return CROSSAUDIO_EC_INIT;
 	}
@@ -448,17 +458,17 @@ ErrorCode BE_Flux::pause(const bool on) {
 	}
 }
 
-const char *BE_Flux::nameGet() const {
+const char *Flux::nameGet() const {
 	// TODO: Implement this.
 	return nullptr;
 }
 
-ErrorCode BE_Flux::nameSet(const char *) {
+ErrorCode Flux::nameSet(const char *) {
 	// TODO: Implement this.
 	return CROSSAUDIO_EC_OK;
 }
 
-void BE_Flux::processInput() {
+void Flux::processInput() {
 	if (init() != CROSSAUDIO_EC_OK) {
 		return;
 	}
@@ -523,7 +533,7 @@ cleanup:
 	deinit();
 }
 
-void BE_Flux::processOutput() {
+void Flux::processOutput() {
 	if (init() != CROSSAUDIO_EC_OK) {
 		return;
 	}

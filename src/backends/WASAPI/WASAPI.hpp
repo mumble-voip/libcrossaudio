@@ -30,7 +30,9 @@ struct IAudioClient3;
 struct IMMDevice;
 struct IMMDeviceEnumerator;
 
-struct BE_Engine {
+namespace wasapi {
+class Engine {
+public:
 	struct SessionID {
 		uint32_t part1;
 		uint16_t part2;
@@ -38,8 +40,8 @@ struct BE_Engine {
 		uint8_t part4[8];
 	};
 
-	BE_Engine();
-	~BE_Engine();
+	Engine();
+	~Engine();
 
 	constexpr operator bool() const { return m_enumerator; }
 
@@ -57,13 +59,14 @@ struct BE_Engine {
 	IMMDeviceEnumerator *m_enumerator;
 
 private:
-	BE_Engine(const BE_Engine &)            = delete;
-	BE_Engine &operator=(const BE_Engine &) = delete;
+	Engine(const Engine &)            = delete;
+	Engine &operator=(const Engine &) = delete;
 };
 
-struct BE_Flux {
-	BE_Flux(BE_Engine &engine);
-	~BE_Flux();
+class Flux {
+public:
+	Flux(Engine &engine);
+	~Flux();
 
 	constexpr operator bool() const { return m_event; }
 
@@ -77,7 +80,7 @@ struct BE_Flux {
 	void processInput();
 	void processOutput();
 
-	BE_Engine &m_engine;
+	Engine &m_engine;
 	FluxFeedback m_feedback;
 
 	std::atomic_bool m_halt;
@@ -88,9 +91,10 @@ struct BE_Flux {
 	std::unique_ptr< std::thread > m_thread;
 
 private:
-	BE_Flux(const BE_Flux &)            = delete;
-	BE_Flux &operator=(const BE_Flux &) = delete;
+	Flux(const Flux &)            = delete;
+	Flux &operator=(const Flux &) = delete;
 };
+} // namespace wasapi
 
 // Backend API
 
