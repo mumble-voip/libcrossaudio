@@ -407,11 +407,11 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 		return CROSSAUDIO_EC_GENERIC;
 	}
 
-	if (m_client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK, framesDef, &fmtBasic,
-											  reinterpret_cast< GUID * >(&m_engine.m_sessionID))
-		!= S_OK) {
+	const auto hr = m_client->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK, framesDef, &fmtBasic,
+														  reinterpret_cast< GUID * >(&m_engine.m_sessionID));
+	if (hr != S_OK) {
 		stop();
-		return CROSSAUDIO_EC_GENERIC;
+		return hr == E_ACCESSDENIED ? CROSSAUDIO_EC_PERMISSION : CROSSAUDIO_EC_GENERIC;
 	}
 
 	m_thread = std::make_unique< std::thread >(threadFunc);

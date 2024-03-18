@@ -15,7 +15,8 @@ enum CrossAudio_ErrorCode {
 	CROSSAUDIO_EC_BUSY,
 	CROSSAUDIO_EC_LIBRARY,
 	CROSSAUDIO_EC_SYMBOL,
-	CROSSAUDIO_EC_CONNECT
+	CROSSAUDIO_EC_CONNECT,
+	CROSSAUDIO_EC_PERMISSION
 };
 
 static inline const char *CrossAudio_ErrorCodeText(const enum CrossAudio_ErrorCode ec) {
@@ -38,6 +39,8 @@ static inline const char *CrossAudio_ErrorCodeText(const enum CrossAudio_ErrorCo
 			return "CROSSAUDIO_EC_SYMBOL";
 		case CROSSAUDIO_EC_CONNECT:
 			return "CROSSAUDIO_EC_CONNECT";
+		case CROSSAUDIO_EC_PERMISSION:
+			return "CROSSAUDIO_EC_PERMISSION";
 	}
 
 	return "";
