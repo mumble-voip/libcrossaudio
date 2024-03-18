@@ -16,6 +16,8 @@
 #	define BACKEND CROSSAUDIO_BACKEND_PIPEWIRE
 #elif defined(OS_WINDOWS)
 #	define BACKEND CROSSAUDIO_BACKEND_WASAPI
+#else
+#	define BACKEND CROSSAUDIO_BACKEND_OSS
 #endif
 
 typedef enum CrossAudio_Backend Backend;

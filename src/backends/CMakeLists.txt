@@ -3,7 +3,8 @@
 # that can be found in the LICENSE file at the root of the
 # Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+if(UNIX)
+	add_subdirectory(OSS)
 	add_subdirectory(PipeWire)
 endif()
 
