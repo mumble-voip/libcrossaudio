@@ -599,12 +599,8 @@ static constexpr spa_audio_format translateFormat(const CrossAudio_BitFormat for
 					return SPA_AUDIO_FORMAT_S8;
 				case 16:
 					return SPA_AUDIO_FORMAT_S16;
-				case 18:
-					return SPA_AUDIO_FORMAT_S18;
-				case 20:
-					return SPA_AUDIO_FORMAT_S20;
 				case 24:
-					return SPA_AUDIO_FORMAT_S24;
+					return SPA_AUDIO_FORMAT_S24_32;
 				case 32:
 					return SPA_AUDIO_FORMAT_S32;
 			}
@@ -616,12 +612,8 @@ static constexpr spa_audio_format translateFormat(const CrossAudio_BitFormat for
 					return SPA_AUDIO_FORMAT_U8;
 				case 16:
 					return SPA_AUDIO_FORMAT_U16;
-				case 18:
-					return SPA_AUDIO_FORMAT_U18;
-				case 20:
-					return SPA_AUDIO_FORMAT_U20;
 				case 24:
-					return SPA_AUDIO_FORMAT_U24;
+					return SPA_AUDIO_FORMAT_U24_32;
 				case 32:
 					return SPA_AUDIO_FORMAT_U32;
 			}
