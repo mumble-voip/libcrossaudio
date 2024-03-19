@@ -7,6 +7,7 @@
 
 #include "Backend.h"
 
+#include <bit>
 #include <cstring>
 #include <functional>
 #include <thread>
@@ -665,7 +666,7 @@ static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &confi
 	fmtBasic.wFormatTag      = WAVE_FORMAT_EXTENSIBLE;
 	fmtBasic.nChannels       = config.channels;
 	fmtBasic.nSamplesPerSec  = config.sampleRate;
-	fmtBasic.wBitsPerSample  = fmt.Samples.wValidBitsPerSample;
+	fmtBasic.wBitsPerSample  = std::bit_ceil(config.sampleBits);
 	fmtBasic.nBlockAlign     = fmtBasic.nChannels * fmtBasic.wBitsPerSample / 8;
 	fmtBasic.nAvgBytesPerSec = fmtBasic.nBlockAlign * fmtBasic.nSamplesPerSec;
 
