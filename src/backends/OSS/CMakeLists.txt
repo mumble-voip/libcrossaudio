@@ -41,7 +41,6 @@ target_sources(be_oss
 		"FileDescriptor.hpp"
 		"OSS.cpp"
 		"OSS.hpp"
-		"PauseFlag.hpp"
 )
 
 target_link_libraries(be_oss

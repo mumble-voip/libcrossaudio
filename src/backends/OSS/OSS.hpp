@@ -7,7 +7,6 @@
 #define CROSSAUDIO_SRC_BACKENDS_OSS_OSS_HPP
 
 #include "FileDescriptor.hpp"
-#include "PauseFlag.hpp"
 
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
@@ -86,8 +85,8 @@ private:
 
 	FileDescriptor m_fd;
 
-	PauseFlag m_pause;
 	std::atomic_bool m_halt;
+	std::atomic_flag m_pause;
 	std::unique_ptr< std::thread > m_thread;
 };
 } // namespace oss

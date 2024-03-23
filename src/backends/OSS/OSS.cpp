@@ -367,7 +367,8 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 
 ErrorCode Flux::stop() {
 	m_halt = true;
-	m_pause.set(false);
+	m_pause.clear();
+	m_pause.notify_all();
 
 	if (m_thread) {
 		m_thread->join();
@@ -380,7 +381,13 @@ ErrorCode Flux::stop() {
 }
 
 ErrorCode Flux::pause(const bool on) {
-	m_pause.set(on);
+	if (on) {
+		m_pause.test_and_set();
+	} else {
+		m_pause.clear();
+	}
+
+	m_pause.notify_all();
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -409,8 +416,8 @@ void Flux::processInput() {
 		FluxData fluxData = { buffer.data(), static_cast< uint32_t >(bytes / frameSize) };
 		m_feedback.process(m_feedback.userData, &fluxData);
 
-		if (m_pause) {
-			m_pause.wait(false);
+		if (m_pause.test()) {
+			m_pause.wait(true);
 		}
 	}
 
@@ -431,9 +438,9 @@ void Flux::processOutput() {
 			break;
 		}
 
-		if (m_pause) {
+		if (m_pause.test()) {
 			ioctl(m_fd.get(), SNDCTL_DSP_SILENCE, 0);
-			m_pause.wait(false);
+			m_pause.wait(true);
 			ioctl(m_fd.get(), SNDCTL_DSP_SKIP, 0);
 		}
 	}
