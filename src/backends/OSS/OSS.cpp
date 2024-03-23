@@ -7,6 +7,7 @@
 
 #include "Backend.h"
 
+#include <bit>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -395,7 +396,7 @@ ErrorCode Flux::nameSet(const char *) {
 }
 
 void Flux::processInput() {
-	const uint32_t frameSize = (m_config.sampleBits / 8) * m_config.channels;
+	const uint32_t frameSize = (std::bit_ceil(m_config.sampleBits) / 8) * m_config.channels;
 
 	std::vector< std::byte > buffer(frameSize * DEFAULT_QUANTUM);
 
@@ -417,7 +418,7 @@ void Flux::processInput() {
 }
 
 void Flux::processOutput() {
-	const uint32_t frameSize = (m_config.sampleBits / 8) * m_config.channels;
+	const uint32_t frameSize = (std::bit_ceil(m_config.sampleBits) / 8) * m_config.channels;
 
 	std::vector< std::byte > buffer(frameSize * DEFAULT_QUANTUM);
 
