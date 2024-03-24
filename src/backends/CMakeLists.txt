@@ -4,6 +4,10 @@
 # Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
 if(UNIX)
+	if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+		add_subdirectory(ALSA)
+	endif()
+
 	add_subdirectory(OSS)
 	add_subdirectory(PipeWire)
 endif()

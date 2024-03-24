@@ -1,5 +1,11 @@
 {
 	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
 	"name": "libcrossaudio",
-	"version": "0.0.0.0"
+	"version": "0.0.0.0",
+	"dependencies": [
+		{
+			"name": "alsa",
+			"platform": "linux"
+		}
+	]
 }

@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 #if defined(OS_LINUX)
-#	define BACKEND CROSSAUDIO_BACKEND_PIPEWIRE
+#	define BACKEND CROSSAUDIO_BACKEND_ALSA
 #elif defined(OS_WINDOWS)
 #	define BACKEND CROSSAUDIO_BACKEND_WASAPI
 #else
