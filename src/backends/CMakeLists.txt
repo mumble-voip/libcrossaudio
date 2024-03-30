@@ -10,6 +10,7 @@ if(UNIX)
 
 	add_subdirectory(OSS)
 	add_subdirectory(PipeWire)
+	add_subdirectory(PulseAudio)
 endif()
 
 if(WIN32)

@@ -14,6 +14,8 @@
 		return CROSSAUDIO_EC_SYMBOL;               \
 	}
 
+using namespace pipewire;
+
 Library::Library() : m_handle(nullptr) {
 }
 

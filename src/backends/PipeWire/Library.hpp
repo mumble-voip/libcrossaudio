@@ -18,6 +18,7 @@ using ErrorCode = CrossAudio_ErrorCode;
 
 struct pw_thread_loop;
 
+namespace pipewire {
 class Library {
 public:
 	Library();
@@ -75,5 +76,6 @@ private:
 	Library(const Library &)            = delete;
 	Library &operator=(const Library &) = delete;
 };
+} // namespace pipewire
 
 #endif
