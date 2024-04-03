@@ -58,6 +58,7 @@ target_link_libraries(crossaudio
 		$<TARGET_NAME_IF_EXISTS:be_oss>
 		$<TARGET_NAME_IF_EXISTS:be_pipewire>
 		$<TARGET_NAME_IF_EXISTS:be_pulseaudio>
+		$<TARGET_NAME_IF_EXISTS:be_sndio>
 		$<TARGET_NAME_IF_EXISTS:be_wasapi>
 )
 

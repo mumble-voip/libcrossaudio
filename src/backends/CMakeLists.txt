@@ -11,6 +11,7 @@ if(UNIX)
 	add_subdirectory(OSS)
 	add_subdirectory(PipeWire)
 	add_subdirectory(PulseAudio)
+	add_subdirectory(Sndio)
 endif()
 
 if(WIN32)

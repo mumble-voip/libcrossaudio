@@ -95,9 +95,9 @@ static inline const BE_Impl *backendGetImpl(const Backend backend) {
 			return NULL;
 #endif
 		}
-		case CROSSAUDIO_BACKEND_JACKAUDIO: {
-#ifdef HAS_JACKAUDIO
-			GET_BACKEND(JackAudio)
+		case CROSSAUDIO_BACKEND_SNDIO: {
+#ifdef HAS_SNDIO
+			GET_BACKEND(Sndio)
 #else
 			return NULL;
 #endif
