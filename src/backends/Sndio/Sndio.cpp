@@ -93,12 +93,8 @@ static ErrorCode engineNameSet(BE_Engine *, const char *) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static Node *engineNodesGet(BE_Engine *) {
+static Nodes *engineNodesGet(BE_Engine *) {
 	return nullptr;
-}
-
-static ErrorCode engineNodesFree(BE_Engine *, Node *) {
-	return CROSSAUDIO_EC_OK;
 }
 
 static BE_Flux *fluxNew(BE_Engine *) {
@@ -146,7 +142,6 @@ constexpr BE_Impl Sndio_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,

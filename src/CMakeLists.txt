@@ -38,6 +38,8 @@ target_sources(crossaudio
 		"Engine.h"
 		"Flux.c"
 		"Flux.h"
+		"Node.c"
+		"Node.h"
 	PUBLIC
 		"${INCLUDE_DIR}/crossaudio/Backend.h"
 		"${INCLUDE_DIR}/crossaudio/BitFormat.h"

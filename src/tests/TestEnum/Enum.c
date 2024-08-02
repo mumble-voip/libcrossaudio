@@ -8,6 +8,7 @@
 #include "crossaudio/Node.h"
 
 typedef struct CrossAudio_Node Node;
+typedef struct CrossAudio_Nodes Nodes;
 
 int main() {
 	if (!initBackend()) {
@@ -22,14 +23,14 @@ int main() {
 	int ret = 0;
 
 	do {
-		Node *nodes = CrossAudio_engineNodesGet(engine);
+		Nodes *nodes = CrossAudio_engineNodesGet(engine);
 		if (!nodes) {
 			ret = 3;
 			break;
 		}
 
-		for (size_t i = 0; i < SIZE_MAX; ++i) {
-			const Node *node = &nodes[i];
+		for (size_t i = 0; i < nodes->count; ++i) {
+			const Node *node = &nodes->items[i];
 			if (!node->id) {
 				break;
 			}
@@ -37,7 +38,7 @@ int main() {
 			printf("[%s] %s (%s)\n", node->id, node->name, CrossAudio_DirectionText(node->direction));
 		}
 
-		CrossAudio_engineNodesFree(engine, nodes);
+		CrossAudio_nodesFree(nodes);
 	} while (getchar() != 'q');
 
 	if (!destroyEngine(engine)) {

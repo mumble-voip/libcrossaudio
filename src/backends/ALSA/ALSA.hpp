@@ -18,7 +18,7 @@ typedef CrossAudio_FluxConfig FluxConfig;
 typedef CrossAudio_FluxFeedback FluxFeedback;
 
 typedef CrossAudio_ErrorCode ErrorCode;
-typedef CrossAudio_Node Node;
+typedef CrossAudio_Nodes Nodes;
 
 struct BE_Impl;
 
@@ -39,8 +39,7 @@ public:
 	const char *nameGet() const;
 	ErrorCode nameSet(const char *name);
 
-	::Node *engineNodesGet();
-	ErrorCode engineNodesFree(::Node *nodes);
+	Nodes *engineNodesGet();
 
 	ErrorCode start();
 	ErrorCode stop();

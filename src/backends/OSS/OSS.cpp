@@ -6,6 +6,7 @@
 #include "OSS.hpp"
 
 #include "Backend.h"
+#include "Node.h"
 
 #include <bit>
 #include <cerrno>
@@ -113,12 +114,8 @@ static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return toImpl(engine)->nameSet(name);
 }
 
-static Node *engineNodesGet(BE_Engine *engine) {
+static Nodes *engineNodesGet(BE_Engine *engine) {
 	return toImpl(engine)->engineNodesGet();
-}
-
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *) {
@@ -166,7 +163,6 @@ const BE_Impl OSS_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -224,7 +220,7 @@ ErrorCode Engine::nameSet(const char *name) {
 	return CROSSAUDIO_EC_OK;
 }
 
-::Node *Engine::engineNodesGet() {
+Nodes *Engine::engineNodesGet() {
 	oss_sysinfo sysInfo;
 	if (!getSysInfo(sysInfo, m_fd)) {
 		return nullptr;
@@ -255,30 +251,15 @@ ErrorCode Engine::nameSet(const char *name) {
 		direction = static_cast< Direction >(dir);
 	}
 
-	auto nodes = static_cast< ::Node * >(calloc(nodeMap.size() + 1, sizeof(::Node)));
+	auto nodes = nodesNew(nodeMap.size());
 
 	for (auto [i, iter] = std::tuple{ std::size_t(0), nodeMap.cbegin() }; iter != nodeMap.cend(); ++i, ++iter) {
-		nodes[i].id        = strdup(iter->first.data());
-		nodes[i].name      = strrchr(nodes[i].id, '/') + 1;
-		nodes[i].direction = iter->second;
+		nodes->items[i].id        = strdup(iter->first.data());
+		nodes->items[i].name      = strdup(strrchr(iter->first.data(), '/') + 1);
+		nodes->items[i].direction = iter->second;
 	}
 
 	return nodes;
-}
-
-ErrorCode Engine::engineNodesFree(::Node *nodes) {
-	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
-		auto &node = nodes[i];
-		if (!node.id) {
-			break;
-		}
-
-		free(node.id);
-	}
-
-	free(nodes);
-
-	return CROSSAUDIO_EC_OK;
 }
 
 // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=246231

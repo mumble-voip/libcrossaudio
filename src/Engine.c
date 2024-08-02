@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 
-typedef struct CrossAudio_Node Node;
+typedef struct CrossAudio_Nodes Nodes;
 
 Engine *CrossAudio_engineNew(const Backend backend) {
 	const BE_Impl *impl = backendGetImpl(backend);
@@ -55,10 +55,6 @@ ErrorCode CrossAudio_engineNameSet(Engine *engine, const char *name) {
 	return engine->beImpl->engineNameSet(engine->beData, name);
 }
 
-Node *CrossAudio_engineNodesGet(Engine *engine) {
+Nodes *CrossAudio_engineNodesGet(Engine *engine) {
 	return engine->beImpl->engineNodesGet(engine->beData);
-}
-
-ErrorCode CrossAudio_engineNodesFree(Engine *engine, Node *nodes) {
-	return engine->beImpl->engineNodesFree(engine->beData, nodes);
 }

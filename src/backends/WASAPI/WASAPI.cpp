@@ -6,6 +6,7 @@
 #include "WASAPI.hpp"
 
 #include "Backend.h"
+#include "Node.h"
 
 #include <bit>
 #include <cstring>
@@ -129,12 +130,8 @@ static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return toImpl(engine)->nameSet(name);
 }
 
-static Node *engineNodesGet(BE_Engine *engine) {
+static Nodes *engineNodesGet(BE_Engine *engine) {
 	return toImpl(engine)->engineNodesGet();
-}
-
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *engine) {
@@ -190,7 +187,6 @@ const BE_Impl WASAPI_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -233,7 +229,7 @@ ErrorCode Engine::nameSet(const char *name) {
 	return CROSSAUDIO_EC_OK;
 }
 
-::Node *Engine::engineNodesGet() {
+Nodes *Engine::engineNodesGet() {
 	IMMDeviceCollection *collection;
 	if (m_enumerator->EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE, &collection) != S_OK) {
 		return nullptr;
@@ -242,7 +238,7 @@ ErrorCode Engine::nameSet(const char *name) {
 	UINT count = 0;
 	collection->GetCount(&count);
 
-	auto nodes = static_cast< ::Node * >(calloc(count + 1, sizeof(::Node)));
+	auto nodes = nodesNew(count);
 
 	for (decltype(count) i = 0; i < count; ++i) {
 		IMMDevice *device;
@@ -258,7 +254,7 @@ ErrorCode Engine::nameSet(const char *name) {
 
 		LPWSTR id;
 		if (device->GetId(&id) == S_OK) {
-			auto &node = nodes[i];
+			auto &node = nodes->items[i];
 
 			IMMEndpoint *endpoint;
 			if (device->QueryInterface(__uuidof(IMMEndpoint), reinterpret_cast< void ** >(&endpoint)) == S_OK) {
@@ -300,22 +296,6 @@ ErrorCode Engine::nameSet(const char *name) {
 	collection->Release();
 
 	return nodes;
-}
-
-ErrorCode Engine::engineNodesFree(::Node *nodes) {
-	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
-		auto &node = nodes[i];
-		if (!node.id) {
-			break;
-		}
-
-		free(node.id);
-		free(node.name);
-	}
-
-	free(nodes);
-
-	return CROSSAUDIO_EC_OK;
 }
 
 Flux::Flux(Engine &engine)

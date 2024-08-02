@@ -5,11 +5,12 @@
 
 #include "PipeWire.hpp"
 
+#include "Node.h"
+
 #include "crossaudio/Macros.h"
 
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <utility>
 
@@ -110,12 +111,8 @@ static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return toImpl(engine)->nameSet(name);
 }
 
-static Node *engineNodesGet(BE_Engine *engine) {
+static Nodes *engineNodesGet(BE_Engine *engine) {
 	return toImpl(engine)->engineNodesGet();
-}
-
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *engine) {
@@ -171,7 +168,6 @@ constexpr BE_Impl PipeWire_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -310,16 +306,16 @@ ErrorCode Engine::nameSet(const char *name) {
 	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
 
-::Node *Engine::engineNodesGet() {
+Nodes *Engine::engineNodesGet() {
 	const auto lock = locker();
 
-	auto nodes = static_cast< ::Node * >(calloc(m_nodes.size() + 1, sizeof(::Node)));
+	auto nodes = nodesNew(m_nodes.size());
 
 	size_t i = 0;
 
 	for (const auto &iter : m_nodes) {
 		const auto &nodeIn = iter.second;
-		auto &nodeOut      = nodes[i++];
+		auto &nodeOut      = nodes->items[i++];
 
 		nodeOut.direction = nodeIn.direction;
 
@@ -331,22 +327,6 @@ ErrorCode Engine::nameSet(const char *name) {
 	}
 
 	return nodes;
-}
-
-ErrorCode Engine::engineNodesFree(::Node *nodes) {
-	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
-		auto &node = nodes[i];
-		if (!node.id) {
-			break;
-		}
-
-		free(node.id);
-		free(node.name);
-	}
-
-	free(nodes);
-
-	return CROSSAUDIO_EC_OK;
 }
 
 void Engine::addNode(const uint32_t id, const spa_dict *props) {

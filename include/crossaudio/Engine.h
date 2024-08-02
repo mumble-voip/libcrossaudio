@@ -25,9 +25,7 @@ CROSSAUDIO_EXPORT const char *CrossAudio_engineNameGet(struct CrossAudio_Engine 
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineNameSet(struct CrossAudio_Engine *engine,
 																	 const char *name);
 
-CROSSAUDIO_EXPORT struct CrossAudio_Node *CrossAudio_engineNodesGet(struct CrossAudio_Engine *engine);
-CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineNodesFree(struct CrossAudio_Engine *engine,
-																	   struct CrossAudio_Node *nodes);
+CROSSAUDIO_EXPORT struct CrossAudio_Nodes *CrossAudio_engineNodesGet(struct CrossAudio_Engine *engine);
 
 #ifdef __cplusplus
 }

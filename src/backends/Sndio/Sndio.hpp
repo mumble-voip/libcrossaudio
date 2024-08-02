@@ -10,7 +10,6 @@
 
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
-#include "crossaudio/Node.h"
 
 #include <atomic>
 #include <cstdint>
@@ -20,7 +19,6 @@ typedef CrossAudio_FluxConfig FluxConfig;
 typedef CrossAudio_FluxFeedback FluxFeedback;
 
 typedef CrossAudio_ErrorCode ErrorCode;
-typedef CrossAudio_Node Node;
 
 struct BE_Impl;
 

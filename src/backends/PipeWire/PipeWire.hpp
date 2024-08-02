@@ -25,7 +25,7 @@ using FluxConfig   = CrossAudio_FluxConfig;
 using FluxFeedback = CrossAudio_FluxFeedback;
 
 using Direction = CrossAudio_Direction;
-using Node      = CrossAudio_Node;
+using Nodes     = CrossAudio_Nodes;
 
 struct spa_audio_info_raw;
 
@@ -68,8 +68,7 @@ public:
 	const char *nameGet() const;
 	ErrorCode nameSet(const char *name);
 
-	::Node *engineNodesGet();
-	ErrorCode engineNodesFree(::Node *nodes);
+	Nodes *engineNodesGet();
 
 	ErrorCode start();
 	ErrorCode stop();

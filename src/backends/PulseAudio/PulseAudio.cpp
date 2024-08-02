@@ -5,10 +5,11 @@
 
 #include "PulseAudio.hpp"
 
+#include "Node.h"
+
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <utility>
 
@@ -93,12 +94,8 @@ static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return toImpl(engine)->nameSet(name);
 }
 
-static Node *engineNodesGet(BE_Engine *engine) {
+static Nodes *engineNodesGet(BE_Engine *engine) {
 	return toImpl(engine)->engineNodesGet();
-}
-
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *engine) {
@@ -146,7 +143,6 @@ constexpr BE_Impl PulseAudio_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -255,16 +251,16 @@ ErrorCode Engine::nameSet(const char *name) {
 	return CROSSAUDIO_EC_OK;
 }
 
-::Node *Engine::engineNodesGet() {
+Nodes *Engine::engineNodesGet() {
 	const std::unique_lock lock(m_nodesLock);
 
-	auto nodes = static_cast< ::Node * >(calloc(m_nodes.size() + 1, sizeof(::Node)));
+	auto nodes = nodesNew(m_nodes.size());
 
 	size_t i = 0;
 
 	for (const auto &iter : m_nodes) {
 		const auto &nodeIn = iter.second;
-		auto &nodeOut      = nodes[i++];
+		auto &nodeOut      = nodes->items[i++];
 
 		nodeOut.id        = strdup(nodeIn.name.data());
 		nodeOut.name      = strdup(nodeIn.description.data());
@@ -272,22 +268,6 @@ ErrorCode Engine::nameSet(const char *name) {
 	}
 
 	return nodes;
-}
-
-ErrorCode Engine::engineNodesFree(::Node *nodes) {
-	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
-		auto &node = nodes[i];
-		if (!node.id) {
-			break;
-		}
-
-		free(node.id);
-		free(node.name);
-	}
-
-	free(nodes);
-
-	return CROSSAUDIO_EC_OK;
 }
 
 std::string Engine::defaultInName() {

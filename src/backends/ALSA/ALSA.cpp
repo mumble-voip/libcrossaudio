@@ -6,6 +6,7 @@
 #include "ALSA.hpp"
 
 #include "Backend.h"
+#include "Node.h"
 
 #include <algorithm>
 #include <bit>
@@ -13,7 +14,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
-#include <limits>
 #include <map>
 #include <thread>
 #include <vector>
@@ -93,12 +93,8 @@ static ErrorCode engineNameSet(BE_Engine *engine, const char *name) {
 	return toImpl(engine)->nameSet(name);
 }
 
-static Node *engineNodesGet(BE_Engine *engine) {
+static Nodes *engineNodesGet(BE_Engine *engine) {
 	return toImpl(engine)->engineNodesGet();
-}
-
-static ErrorCode engineNodesFree(BE_Engine *engine, Node *nodes) {
-	return toImpl(engine)->engineNodesFree(nodes);
 }
 
 static BE_Flux *fluxNew(BE_Engine *) {
@@ -146,7 +142,6 @@ const BE_Impl ALSA_Impl = {
 	engineNameGet,
 	engineNameSet,
 	engineNodesGet,
-	engineNodesFree,
 
 	fluxNew,
 	fluxFree,
@@ -183,7 +178,7 @@ ErrorCode Engine::nameSet(const char *name) {
 	return CROSSAUDIO_EC_OK;
 }
 
-::Node *Engine::engineNodesGet() {
+Nodes *Engine::engineNodesGet() {
 	void **hints;
 	if (snd_device_name_hint(-1, "pcm", &hints) < 0) {
 		return nullptr;
@@ -218,31 +213,15 @@ ErrorCode Engine::nameSet(const char *name) {
 		return nullptr;
 	}
 
-	auto nodes = static_cast< ::Node * >(calloc(nodeMap.size() + 1, sizeof(::Node)));
+	auto nodes = nodesNew(nodeMap.size());
 
 	for (auto [i, iter] = std::tuple{ std::size_t(0), nodeMap.cbegin() }; iter != nodeMap.cend(); ++i, ++iter) {
-		nodes[i].id        = const_cast< char        *>(iter->first.data());
-		nodes[i].name      = const_cast< char      *>(iter->second.first.data());
-		nodes[i].direction = iter->second.second;
+		nodes->items[i].id        = const_cast< char        *>(iter->first.data());
+		nodes->items[i].name      = const_cast< char      *>(iter->second.first.data());
+		nodes->items[i].direction = iter->second.second;
 	}
 
 	return nodes;
-}
-
-ErrorCode Engine::engineNodesFree(::Node *nodes) {
-	for (size_t i = 0; i < std::numeric_limits< size_t >::max(); ++i) {
-		auto &node = nodes[i];
-		if (!node.id) {
-			break;
-		}
-
-		free(node.id);
-		free(node.name);
-	}
-
-	free(nodes);
-
-	return CROSSAUDIO_EC_OK;
 }
 
 void Engine::cleanNodeName(char *name) {

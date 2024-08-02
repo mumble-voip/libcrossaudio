@@ -25,7 +25,7 @@ using FluxConfig   = CrossAudio_FluxConfig;
 using FluxFeedback = CrossAudio_FluxFeedback;
 
 using Direction = CrossAudio_Direction;
-using Node      = CrossAudio_Node;
+using Nodes     = CrossAudio_Nodes;
 
 namespace pulseaudio {
 class Engine {
@@ -61,8 +61,7 @@ public:
 	const char *nameGet() const;
 	ErrorCode nameSet(const char *name);
 
-	::Node *engineNodesGet();
-	ErrorCode engineNodesFree(::Node *nodes);
+	Nodes *engineNodesGet();
 
 	ErrorCode start();
 	ErrorCode stop();
