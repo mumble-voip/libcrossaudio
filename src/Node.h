@@ -15,6 +15,7 @@ typedef struct CrossAudio_Nodes Nodes;
 extern "C" {
 #endif
 
+Node *nodeNew(void);
 Nodes *nodesNew(size_t count);
 
 #ifdef __cplusplus

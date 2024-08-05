@@ -11,6 +11,13 @@
 struct CrossAudio_Engine;
 struct CrossAudio_Node;
 
+struct CrossAudio_EngineFeedback {
+	void *userData;
+
+	void (*nodeAdded)(void *userData, struct CrossAudio_Node *node);
+	void (*nodeRemoved)(void *userData, struct CrossAudio_Node *node);
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,7 +25,8 @@ extern "C" {
 CROSSAUDIO_EXPORT struct CrossAudio_Engine *CrossAudio_engineNew(enum CrossAudio_Backend backend);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineFree(struct CrossAudio_Engine *engine);
 
-CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineStart(struct CrossAudio_Engine *engine);
+CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineStart(struct CrossAudio_Engine *engine,
+																   const struct CrossAudio_EngineFeedback *feedback);
 CROSSAUDIO_EXPORT enum CrossAudio_ErrorCode CrossAudio_engineStop(struct CrossAudio_Engine *engine);
 
 CROSSAUDIO_EXPORT const char *CrossAudio_engineNameGet(struct CrossAudio_Engine *engine);

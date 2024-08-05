@@ -8,6 +8,7 @@
 #include "RingBuffer.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -64,7 +65,7 @@ int main(const int argc, const char *argv[]) {
 		return 1;
 	}
 
-	Engine *engine = createEngine();
+	Engine *engine = createEngine(NULL);
 	if (!engine) {
 		return 2;
 	}

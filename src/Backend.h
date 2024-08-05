@@ -19,6 +19,7 @@
 typedef enum CrossAudio_Backend Backend;
 typedef enum CrossAudio_ErrorCode ErrorCode;
 
+typedef struct CrossAudio_EngineFeedback EngineFeedback;
 typedef struct CrossAudio_FluxConfig FluxConfig;
 typedef struct CrossAudio_FluxFeedback FluxFeedback;
 typedef struct CrossAudio_Nodes Nodes;
@@ -35,7 +36,7 @@ typedef struct BE_Impl {
 
 	BE_Engine *(*engineNew)(void);
 	ErrorCode (*engineFree)(BE_Engine *engine);
-	ErrorCode (*engineStart)(BE_Engine *engine);
+	ErrorCode (*engineStart)(BE_Engine *engine, const EngineFeedback *feedback);
 	ErrorCode (*engineStop)(BE_Engine *engine);
 	const char *(*engineNameGet)(BE_Engine *engine);
 	ErrorCode (*engineNameSet)(BE_Engine *engine, const char *name);
