@@ -27,6 +27,7 @@ using FluxFeedback = CrossAudio_FluxFeedback;
 using Direction = CrossAudio_Direction;
 using Nodes     = CrossAudio_Nodes;
 
+struct pw_node_info;
 struct spa_audio_info_raw;
 
 namespace pipewire {
@@ -42,14 +43,6 @@ public:
 	};
 
 	struct Node {
-		Node(Node &&node);
-		Node(pw_proxy *proxy, const uint32_t serial, const char *name);
-		~Node();
-
-		constexpr explicit operator bool() { return proxy; }
-
-		pw_proxy *proxy;
-		spa_hook listener;
 		uint32_t serial;
 		std::string name;
 		Direction direction;
@@ -73,7 +66,7 @@ public:
 	ErrorCode start();
 	ErrorCode stop();
 
-	void addNode(const uint32_t id, const spa_dict *props);
+	void addNode(const pw_node_info *info);
 	void removeNode(const uint32_t id);
 
 	pw_thread_loop *m_threadLoop;
@@ -112,6 +105,21 @@ public:
 private:
 	Flux(const Flux &)            = delete;
 	Flux &operator=(const Flux &) = delete;
+};
+
+class NodeInfoData {
+public:
+	NodeInfoData(Engine &engine, const uint32_t id);
+	~NodeInfoData();
+
+	constexpr explicit operator bool() { return m_proxy; }
+
+	constexpr Engine &engine() { return m_engine; }
+
+private:
+	Engine &m_engine;
+	pw_proxy *m_proxy;
+	spa_hook m_listener;
 };
 } // namespace pipewire
 

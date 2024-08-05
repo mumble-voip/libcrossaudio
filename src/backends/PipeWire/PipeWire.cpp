@@ -184,9 +184,11 @@ static constexpr auto NODE_TYPE_ID = "PipeWire:Interface:Node";
 static constexpr pw_registry_events eventsRegistry = {
 	PW_VERSION_REGISTRY_EVENTS,
 	[](void *userData, const uint32_t id, const uint32_t /*permissions*/, const char *type, const uint32_t /*version*/,
-	   const spa_dict *props) {
+	   const spa_dict * /*props*/) {
 		if (spa_streq(type, NODE_TYPE_ID)) {
-			static_cast< Engine * >(userData)->addNode(id, props);
+			auto &engine = *static_cast< Engine * >(userData);
+
+			new NodeInfoData(engine, id);
 		}
 	},
 	[](void *userData, const uint32_t id) { static_cast< Engine * >(userData)->removeNode(id); }
@@ -194,17 +196,11 @@ static constexpr pw_registry_events eventsRegistry = {
 
 static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
 											   [](void *userData, const pw_node_info *info) {
-												   auto &node = *static_cast< Engine::Node*                    >(userData);
+												   auto data = static_cast< NodeInfoData*                   >(userData);
 
-												   uint8_t direction = CROSSAUDIO_DIR_NONE;
-												   if (info->n_input_ports > 0) {
-													   direction |= CROSSAUDIO_DIR_OUT;
-												   }
-												   if (info->n_output_ports > 0) {
-													   direction |= CROSSAUDIO_DIR_IN;
-												   }
+												   data->engine().addNode(info);
 
-												   node.direction = static_cast< Direction >(direction);
+												   delete data;
 											   },
 											   nullptr };
 
@@ -329,12 +325,15 @@ Nodes *Engine::engineNodesGet() {
 	return nodes;
 }
 
-void Engine::addNode(const uint32_t id, const spa_dict *props) {
+void Engine::addNode(const pw_node_info *info) {
+	const spa_dict *props = info->props;
+
 	const char *serialStr = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL);
 	if (!serialStr) {
 		return;
 	}
 
+	errno                 = 0;
 	const uint32_t serial = std::strtoul(serialStr, nullptr, 10);
 	if (errno != 0) {
 		return;
@@ -346,40 +345,23 @@ void Engine::addNode(const uint32_t id, const spa_dict *props) {
 		return;
 	}
 
-	auto proxy = static_cast< pw_proxy * >(pw_registry_bind(m_registry, id, NODE_TYPE_ID, PW_VERSION_NODE, 0));
-	if (!proxy) {
-		return;
+	uint8_t direction = CROSSAUDIO_DIR_NONE;
+	if (info->n_input_ports > 0) {
+		direction |= CROSSAUDIO_DIR_OUT;
+	}
+	if (info->n_output_ports > 0) {
+		direction |= CROSSAUDIO_DIR_IN;
 	}
 
 	const auto lock = locker();
 
-	if (const auto ret = m_nodes.emplace(id, Node(proxy, serial, name)); ret.second) {
-		auto &node = ret.first->second;
-		lib.proxy_add_object_listener(node.proxy, &node.listener, &eventsNode, &node);
-	}
+	m_nodes.emplace(info->id, Node(serial, name, static_cast< Direction >(direction)));
 }
 
 void Engine::removeNode(const uint32_t id) {
 	const auto lock = locker();
 
 	m_nodes.erase(id);
-}
-
-Engine::Node::Node(Node &&node)
-	: proxy(std::exchange(node.proxy, nullptr)), listener(std::exchange(node.listener, {})), serial(node.serial),
-	  name(std::move(node.name)), direction(node.direction) {
-}
-
-Engine::Node::Node(pw_proxy *proxy, const uint32_t serial, const char *name)
-	: proxy(proxy), listener(), serial(serial), name(name), direction(CROSSAUDIO_DIR_NONE) {
-}
-
-Engine::Node::~Node() {
-	spa_hook_remove(&listener);
-
-	if (proxy) {
-		lib.proxy_destroy(proxy);
-	}
 }
 
 static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,
@@ -501,6 +483,23 @@ ErrorCode Flux::nameSet(const char *name) {
 	const auto lock = m_engine.locker();
 
 	return lib.stream_update_properties(m_stream, &dict) >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+}
+
+NodeInfoData::NodeInfoData(Engine &engine, const uint32_t id)
+	: m_engine(engine),
+	  m_proxy(static_cast< pw_proxy * >(pw_registry_bind(engine.m_registry, id, NODE_TYPE_ID, PW_VERSION_NODE, 0))),
+	  m_listener() {
+	if (m_proxy) {
+		lib.proxy_add_object_listener(m_proxy, &m_listener, &eventsNode, this);
+	}
+}
+
+NodeInfoData::~NodeInfoData() {
+	spa_hook_remove(&m_listener);
+
+	if (m_proxy) {
+		lib.proxy_destroy(m_proxy);
+	}
 }
 
 static void processInput(void *userData) {
