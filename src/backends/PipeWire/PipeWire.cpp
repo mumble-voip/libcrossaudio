@@ -95,8 +95,8 @@ static ErrorCode engineFree(BE_Engine *engine) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *) {
-	return toImpl(engine)->start();
+static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *feedback) {
+	return toImpl(engine)->start(feedback ? *feedback : EngineFeedback());
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
@@ -235,7 +235,7 @@ void Engine::unlock() {
 	}
 }
 
-ErrorCode Engine::start() {
+ErrorCode Engine::start(const EngineFeedback &feedback) {
 	if (m_core) {
 		return CROSSAUDIO_EC_INIT;
 	}
@@ -243,6 +243,8 @@ ErrorCode Engine::start() {
 	if (m_core = lib.context_connect(m_context, nullptr, 0); !m_core) {
 		return CROSSAUDIO_EC_CONNECT;
 	}
+
+	m_feedback = feedback;
 
 	m_registry = pw_core_get_registry(m_core, PW_VERSION_REGISTRY, 0);
 	pw_registry_add_listener(m_registry, &m_registryListener, &eventsRegistry, this);
@@ -342,15 +344,36 @@ void Engine::addNode(const pw_node_info *info) {
 		direction |= CROSSAUDIO_DIR_IN;
 	}
 
-	const auto lock = locker();
-
+	lock();
 	m_nodes.emplace(info->id, Node(id, name, static_cast< Direction >(direction)));
+	unlock();
+
+	if (m_feedback.nodeAdded) {
+		::Node *nodeNotif = nodeNew();
+
+		nodeNotif->id        = strdup(id);
+		nodeNotif->name      = strdup(name);
+		nodeNotif->direction = static_cast< Direction >(direction);
+
+		m_feedback.nodeAdded(m_feedback.userData, nodeNotif);
+	}
 }
 
 void Engine::removeNode(const uint32_t id) {
-	const auto lock = locker();
+	lock();
+	const auto iter = m_nodes.extract(id);
+	unlock();
 
-	m_nodes.erase(id);
+	if (!iter.empty() && m_feedback.nodeRemoved) {
+		const Node &node  = iter.mapped();
+		::Node *nodeNotif = nodeNew();
+
+		nodeNotif->id        = strdup(node.id.data());
+		nodeNotif->name      = strdup(node.name.data());
+		nodeNotif->direction = node.direction;
+
+		m_feedback.nodeRemoved(m_feedback.userData, nodeNotif);
+	}
 }
 
 static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,

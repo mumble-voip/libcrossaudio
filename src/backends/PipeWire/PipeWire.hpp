@@ -11,6 +11,7 @@
 #include "Backend.h"
 
 #include "crossaudio/Direction.h"
+#include "crossaudio/Engine.h"
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
 #include "crossaudio/Node.h"
@@ -63,12 +64,13 @@ public:
 
 	Nodes *engineNodesGet();
 
-	ErrorCode start();
+	ErrorCode start(const EngineFeedback &feedback);
 	ErrorCode stop();
 
 	void addNode(const pw_node_info *info);
 	void removeNode(const uint32_t id);
 
+	EngineFeedback m_feedback;
 	pw_thread_loop *m_threadLoop;
 	pw_context *m_context;
 	pw_core *m_core;
