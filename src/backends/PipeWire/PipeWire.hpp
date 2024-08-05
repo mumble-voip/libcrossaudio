@@ -43,7 +43,7 @@ public:
 	};
 
 	struct Node {
-		uint32_t serial;
+		std::string id;
 		std::string name;
 		Direction direction;
 	};

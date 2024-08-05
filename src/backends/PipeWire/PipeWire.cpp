@@ -313,13 +313,9 @@ Nodes *Engine::engineNodesGet() {
 		const auto &nodeIn = iter.second;
 		auto &nodeOut      = nodes->items[i++];
 
+		nodeOut.id        = strdup(nodeIn.id.data());
+		nodeOut.name      = strdup(nodeIn.name.data());
 		nodeOut.direction = nodeIn.direction;
-
-		const auto size = snprintf(nullptr, 0, "%u", nodeIn.serial) + 1;
-		nodeOut.id      = static_cast< char      *>(malloc(size));
-		snprintf(nodeOut.id, size, "%u", nodeIn.serial);
-
-		nodeOut.name = strdup(nodeIn.name.data());
 	}
 
 	return nodes;
@@ -328,21 +324,14 @@ Nodes *Engine::engineNodesGet() {
 void Engine::addNode(const pw_node_info *info) {
 	const spa_dict *props = info->props;
 
-	const char *serialStr = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL);
-	if (!serialStr) {
+	const char *id = spa_dict_lookup(props, PW_KEY_NODE_NAME);
+	if (!id) {
 		return;
 	}
 
-	errno                 = 0;
-	const uint32_t serial = std::strtoul(serialStr, nullptr, 10);
-	if (errno != 0) {
-		return;
-	}
-
-	const char *name;
-	if (!(name = spa_dict_lookup(props, PW_KEY_NODE_NAME)) && !(name = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION))
-		&& !(name = spa_dict_lookup(props, PW_KEY_APP_NAME))) {
-		return;
+	const char *name = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION);
+	if (!name) {
+		name = id;
 	}
 
 	uint8_t direction = CROSSAUDIO_DIR_NONE;
@@ -355,7 +344,7 @@ void Engine::addNode(const pw_node_info *info) {
 
 	const auto lock = locker();
 
-	m_nodes.emplace(info->id, Node(serial, name, static_cast< Direction >(direction)));
+	m_nodes.emplace(info->id, Node(id, name, static_cast< Direction >(direction)));
 }
 
 void Engine::removeNode(const uint32_t id) {
