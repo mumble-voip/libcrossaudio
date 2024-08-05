@@ -14,6 +14,12 @@ static void freeNodeInner(Node *node) {
 	free(node->name);
 }
 
+Node *nodeNew(void) {
+	Node *node = calloc(1, sizeof(Node));
+
+	return node;
+}
+
 Nodes *nodesNew(const size_t count) {
 	Nodes *nodes = malloc(sizeof(Nodes));
 

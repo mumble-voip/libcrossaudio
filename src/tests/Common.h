@@ -24,6 +24,7 @@ typedef enum CrossAudio_Backend Backend;
 typedef enum CrossAudio_ErrorCode ErrorCode;
 
 typedef struct CrossAudio_Engine Engine;
+typedef struct CrossAudio_EngineFeedback EngineFeedback;
 typedef struct CrossAudio_Flux Flux;
 typedef struct CrossAudio_FluxConfig FluxConfig;
 typedef struct CrossAudio_FluxFeedback FluxFeedback;
@@ -50,14 +51,14 @@ static inline bool deinitBackend() {
 	return true;
 }
 
-static inline Engine *createEngine() {
+static inline Engine *createEngine(const EngineFeedback *feedback) {
 	Engine *engine = CrossAudio_engineNew(BACKEND);
 	if (!engine) {
 		printf("CrossAudio_engineNew() failed!\n");
 		return NULL;
 	}
 
-	const ErrorCode ec = CrossAudio_engineStart(engine);
+	const ErrorCode ec = CrossAudio_engineStart(engine, feedback);
 	if (ec != CROSSAUDIO_EC_OK) {
 		printf("CrossAudio_engineStart() failed with error \"%s\"!\n", CrossAudio_ErrorCodeText(ec));
 		CrossAudio_engineFree(engine);

@@ -39,8 +39,8 @@ ErrorCode CrossAudio_engineFree(Engine *engine) {
 	return ec;
 }
 
-ErrorCode CrossAudio_engineStart(Engine *engine) {
-	return engine->beImpl->engineStart(engine->beData);
+ErrorCode CrossAudio_engineStart(Engine *engine, const EngineFeedback *feedback) {
+	return engine->beImpl->engineStart(engine->beData, feedback);
 }
 
 ErrorCode CrossAudio_engineStop(Engine *engine) {

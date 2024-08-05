@@ -77,7 +77,7 @@ static ErrorCode engineFree(BE_Engine *engine) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static ErrorCode engineStart(BE_Engine *engine) {
+static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *) {
 	return toImpl(engine)->start();
 }
 
