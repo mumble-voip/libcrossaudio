@@ -10,7 +10,7 @@ jobs:
       matrix:
         include:
           - name: 'Ubuntu (Clang)'
-            os: ubuntu-latest
+            os: ubuntu-24.04
             cCompiler: 'clang'
             cppCompiler: 'clang++'
           - name: 'Ubuntu (GCC)'
