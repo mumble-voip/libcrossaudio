@@ -21,15 +21,15 @@ struct sio_par;
 namespace sndio {
 class Library {
 public:
-	Library();
-	~Library();
+	static Library &instance() {
+		static Library instance;
+		return instance;
+	}
 
 	explicit operator bool() const { return m_handle; }
 
 	ErrorCode load(const std::string_view libraryName);
 	void unload();
-
-	void *m_handle;
 
 	sio_hdl *(*open)(const char *name, unsigned int mode, int nbio_flag);
 	void (*close)(sio_hdl *hdl);
@@ -49,9 +49,18 @@ public:
 	int (*revents)(sio_hdl *hdl, PollFD *pfd);
 
 private:
+	Library();
+	~Library();
+
 	Library(const Library &)            = delete;
 	Library &operator=(const Library &) = delete;
+
+	void *m_handle;
 };
+
+static inline auto &lib() {
+	return Library::instance();
+}
 } // namespace sndio
 
 #endif

@@ -24,8 +24,6 @@ static constexpr auto DEFAULT_QUANTUM = 1024;
 
 using FluxData = CrossAudio_FluxData;
 
-static Library lib;
-
 static auto toImpl(BE_Engine *engine) {
 	return reinterpret_cast< Engine * >(engine);
 }
@@ -53,7 +51,7 @@ static ErrorCode init() {
 	ErrorCode ret;
 
 	for (const auto name : names) {
-		if ((ret = lib.load(name)) != CROSSAUDIO_EC_LIBRARY) {
+		if ((ret = lib().load(name)) != CROSSAUDIO_EC_LIBRARY) {
 			break;
 		}
 	}
@@ -62,7 +60,7 @@ static ErrorCode init() {
 }
 
 static ErrorCode deinit() {
-	lib.unload();
+	lib().unload();
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -186,9 +184,9 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	}
 
 	if (config.node && strcmp(config.node, CROSSAUDIO_FLUX_DEFAULT_NODE) != 0) {
-		m_handle = lib.open(config.node, mode, 1);
+		m_handle = lib().open(config.node, mode, 1);
 	} else {
-		m_handle = lib.open(DEFAULT_NODE, mode, 1);
+		m_handle = lib().open(DEFAULT_NODE, mode, 1);
 	}
 
 	if (!m_handle) {
@@ -196,14 +194,14 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 	}
 
 	sio_par par;
-	if (!configToPar(par, config) || !lib.setpar(m_handle, &par) || !lib.getpar(m_handle, &par)) {
+	if (!configToPar(par, config) || !lib().setpar(m_handle, &par) || !lib().getpar(m_handle, &par)) {
 		stop();
 		return CROSSAUDIO_EC_GENERIC;
 	}
 
 	m_quantum = par.appbufsz / config.channels;
 
-	if (!lib.start(m_handle)) {
+	if (!lib().start(m_handle)) {
 		stop();
 		return CROSSAUDIO_EC_GENERIC;
 	}
@@ -222,7 +220,7 @@ ErrorCode Flux::stop() {
 	}
 
 	if (m_handle) {
-		lib.close(m_handle);
+		lib().close(m_handle);
 		m_handle = nullptr;
 	}
 
@@ -255,19 +253,19 @@ void Flux::processInput() {
 	const uint32_t frameSize = (std::bit_ceil(m_config.sampleBits) / 8) * m_config.channels;
 
 	std::vector< std::byte > buffer(frameSize * m_quantum);
-	std::vector< pollfd > fds(lib.nfds(m_handle));
+	std::vector< pollfd > fds(lib().nfds(m_handle));
 
 	while (!m_halt) {
-		const int numFds = lib.pollfd(m_handle, fds.data(), POLLIN);
+		const int numFds = lib().pollfd(m_handle, fds.data(), POLLIN);
 		if (numFds > 0 && poll(fds.data(), numFds, -1) < 0) {
 			continue;
 		}
 
-		if (lib.revents(m_handle, fds.data()) & POLLHUP) {
+		if (lib().revents(m_handle, fds.data()) & POLLHUP) {
 			return;
 		}
 
-		const auto bytes = lib.read(m_handle, buffer.data(), buffer.size());
+		const auto bytes = lib().read(m_handle, buffer.data(), buffer.size());
 		if (bytes != buffer.size()) {
 			return;
 		}
@@ -276,9 +274,9 @@ void Flux::processInput() {
 		m_feedback.process(m_feedback.userData, &fluxData);
 
 		if (m_pause.test()) {
-			lib.stop(m_handle);
+			lib().stop(m_handle);
 			m_pause.wait(true);
-			lib.start(m_handle);
+			lib().start(m_handle);
 		}
 	}
 }
@@ -287,36 +285,36 @@ void Flux::processOutput() {
 	const uint32_t frameSize = (std::bit_ceil(m_config.sampleBits) / 8) * m_config.channels;
 
 	std::vector< std::byte > buffer(frameSize * m_quantum);
-	std::vector< pollfd > fds(lib.nfds(m_handle));
+	std::vector< pollfd > fds(lib().nfds(m_handle));
 
 	while (!m_halt) {
-		const int numFds = lib.pollfd(m_handle, fds.data(), POLLOUT);
+		const int numFds = lib().pollfd(m_handle, fds.data(), POLLOUT);
 		if (numFds > 0 && poll(fds.data(), numFds, -1) < 0) {
 			continue;
 		}
 
-		if (lib.revents(m_handle, fds.data()) & POLLHUP) {
+		if (lib().revents(m_handle, fds.data()) & POLLHUP) {
 			return;
 		}
 
 		FluxData fluxData = { buffer.data(), m_quantum };
 		m_feedback.process(m_feedback.userData, &fluxData);
 
-		const auto bytes = lib.write(m_handle, buffer.data(), buffer.size());
+		const auto bytes = lib().write(m_handle, buffer.data(), buffer.size());
 		if (bytes != buffer.size()) {
 			return;
 		}
 
 		if (m_pause.test()) {
-			lib.stop(m_handle);
+			lib().stop(m_handle);
 			m_pause.wait(true);
-			lib.start(m_handle);
+			lib().start(m_handle);
 		}
 	}
 }
 
 bool Flux::configToPar(sio_par &par, const FluxConfig &config) {
-	lib.initpar(&par);
+	lib().initpar(&par);
 
 	switch (config.bitFormat) {
 		default:
