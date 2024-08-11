@@ -23,15 +23,15 @@ struct pa_threaded_mainloop;
 namespace pulseaudio {
 class Library {
 public:
-	Library();
-	~Library();
+	static Library &instance() {
+		static Library instance;
+		return instance;
+	}
 
 	explicit operator bool() const { return m_handle; }
 
 	ErrorCode load(const std::string_view libraryName);
 	void unload();
-
-	void *m_handle;
 
 	const char *(*get_library_version)();
 
@@ -83,9 +83,18 @@ public:
 	pa_mainloop_api *(*threaded_mainloop_get_api)(pa_threaded_mainloop *m);
 
 private:
+	Library();
+	~Library();
+
 	Library(const Library &)            = delete;
 	Library &operator=(const Library &) = delete;
+
+	void *m_handle;
 };
+
+static inline auto &lib() {
+	return Library::instance();
+}
 } // namespace pulseaudio
 
 #endif
