@@ -27,8 +27,6 @@ using namespace pipewire;
 
 using FluxData = CrossAudio_FluxData;
 
-static Library lib;
-
 static auto toImpl(BE_Engine *engine) {
 	return reinterpret_cast< Engine * >(engine);
 }
@@ -42,7 +40,7 @@ static const char *name() {
 }
 
 static const char *version() {
-	return lib.get_library_version();
+	return lib().get_library_version();
 }
 
 static ErrorCode init() {
@@ -58,21 +56,21 @@ static ErrorCode init() {
 	ErrorCode ret;
 
 	for (const auto name : names) {
-		if ((ret = lib.load(name)) != CROSSAUDIO_EC_LIBRARY) {
+		if ((ret = lib().load(name)) != CROSSAUDIO_EC_LIBRARY) {
 			break;
 		}
 	}
 
-	if (lib) {
-		lib.init(nullptr, nullptr);
+	if (lib()) {
+		lib().init(nullptr, nullptr);
 	}
 
 	return ret;
 }
 
 static ErrorCode deinit() {
-	lib.deinit();
-	lib.unload();
+	lib().deinit();
+	lib().unload();
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -205,8 +203,8 @@ static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
 											   nullptr };
 
 Engine::Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
-	if ((m_threadLoop = lib.thread_loop_new(nullptr, nullptr))) {
-		m_context = lib.context_new(lib.thread_loop_get_loop(m_threadLoop), nullptr, 0);
+	if ((m_threadLoop = lib().thread_loop_new(nullptr, nullptr))) {
+		m_context = lib().context_new(lib().thread_loop_get_loop(m_threadLoop), nullptr, 0);
 	}
 }
 
@@ -215,23 +213,23 @@ Engine::~Engine() {
 
 	if (m_context) {
 		const auto lock = locker();
-		lib.context_destroy(m_context);
+		lib().context_destroy(m_context);
 	}
 
 	if (m_threadLoop) {
-		lib.thread_loop_destroy(m_threadLoop);
+		lib().thread_loop_destroy(m_threadLoop);
 	}
 }
 
 void Engine::lock() {
 	if (m_threadLoop) {
-		lib.thread_loop_lock(m_threadLoop);
+		lib().thread_loop_lock(m_threadLoop);
 	}
 }
 
 void Engine::unlock() {
 	if (m_threadLoop) {
-		lib.thread_loop_unlock(m_threadLoop);
+		lib().thread_loop_unlock(m_threadLoop);
 	}
 }
 
@@ -240,14 +238,14 @@ ErrorCode Engine::start() {
 		return CROSSAUDIO_EC_INIT;
 	}
 
-	if (m_core = lib.context_connect(m_context, nullptr, 0); !m_core) {
+	if (m_core = lib().context_connect(m_context, nullptr, 0); !m_core) {
 		return CROSSAUDIO_EC_CONNECT;
 	}
 
 	m_registry = pw_core_get_registry(m_core, PW_VERSION_REGISTRY, 0);
 	pw_registry_add_listener(m_registry, &m_registryListener, &eventsRegistry, this);
 
-	if (lib.thread_loop_start(m_threadLoop) < 0) {
+	if (lib().thread_loop_start(m_threadLoop) < 0) {
 		stop();
 		return CROSSAUDIO_EC_GENERIC;
 	}
@@ -263,26 +261,26 @@ ErrorCode Engine::stop() {
 	m_nodes.clear();
 
 	if (m_registry) {
-		lib.proxy_destroy(reinterpret_cast< pw_proxy * >(m_registry));
+		lib().proxy_destroy(reinterpret_cast< pw_proxy * >(m_registry));
 	}
 
 	if (m_core) {
-		lib.core_disconnect(m_core);
+		lib().core_disconnect(m_core);
 		m_core = nullptr;
 	}
 
 	unlock();
 
 	if (m_threadLoop) {
-		lib.thread_loop_stop(m_threadLoop);
+		lib().thread_loop_stop(m_threadLoop);
 	}
 
 	return CROSSAUDIO_EC_OK;
 }
 
 const char *Engine::nameGet() const {
-	if (const auto props = m_core ? lib.core_get_properties(m_core) : lib.context_get_properties(m_context)) {
-		return lib.properties_get(props, PW_KEY_APP_NAME);
+	if (const auto props = m_core ? lib().core_get_properties(m_core) : lib().context_get_properties(m_context)) {
+		return lib().properties_get(props, PW_KEY_APP_NAME);
 	}
 
 	return nullptr;
@@ -294,9 +292,9 @@ ErrorCode Engine::nameSet(const char *name) {
 
 	const auto lock = locker();
 
-	auto ret = lib.context_update_properties(m_context, &dict);
+	auto ret = lib().context_update_properties(m_context, &dict);
 	if (ret >= 1 && m_core) {
-		ret = lib.core_update_properties(m_core, &dict);
+		ret = lib().core_update_properties(m_core, &dict);
 	}
 
 	return ret >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
@@ -381,19 +379,19 @@ static constexpr pw_stream_events eventsOutput = { PW_VERSION_STREAM_EVENTS,
 Flux::Flux(Engine &engine) : m_engine(engine), m_stream(nullptr), m_frameSize(0) {
 	if (engine.m_core) {
 		const auto lock = engine.locker();
-		m_stream        = lib.stream_new(engine.m_core, nullptr, nullptr);
+		m_stream        = lib().stream_new(engine.m_core, nullptr, nullptr);
 	}
 }
 
 Flux::~Flux() {
 	if (m_stream) {
 		const auto lock = m_engine.locker();
-		lib.stream_destroy(m_stream);
+		lib().stream_destroy(m_stream);
 	}
 }
 
 ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
-	if (lib.stream_get_state(m_stream, nullptr) != PW_STREAM_STATE_UNCONNECTED) {
+	if (lib().stream_get_state(m_stream, nullptr) != PW_STREAM_STATE_UNCONNECTED) {
 		return CROSSAUDIO_EC_INIT;
 	}
 
@@ -432,10 +430,10 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 
 	const auto lock = m_engine.locker();
 
-	lib.stream_update_properties(m_stream, &dict);
-	lib.stream_add_listener(m_stream, &m_listener, direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput,
-							this);
-	lib.stream_connect(m_stream, direction, PW_ID_ANY, flags, &params, 1);
+	lib().stream_update_properties(m_stream, &dict);
+	lib().stream_add_listener(m_stream, &m_listener, direction == PW_DIRECTION_INPUT ? &eventsInput : &eventsOutput,
+							  this);
+	lib().stream_connect(m_stream, direction, PW_ID_ANY, flags, &params, 1);
 
 	return CROSSAUDIO_EC_OK;
 }
@@ -443,7 +441,7 @@ ErrorCode Flux::start(FluxConfig &config, const FluxFeedback &feedback) {
 ErrorCode Flux::stop() {
 	const auto lock = m_engine.locker();
 
-	lib.stream_disconnect(m_stream);
+	lib().stream_disconnect(m_stream);
 	spa_hook_remove(&m_listener);
 
 	return CROSSAUDIO_EC_OK;
@@ -452,14 +450,14 @@ ErrorCode Flux::stop() {
 ErrorCode Flux::pause(const bool on) {
 	const auto lock = m_engine.locker();
 
-	lib.stream_set_active(m_stream, !on);
+	lib().stream_set_active(m_stream, !on);
 
 	return CROSSAUDIO_EC_OK;
 }
 
 const char *Flux::nameGet() const {
-	if (const auto props = lib.stream_get_properties(m_stream)) {
-		return lib.properties_get(props, PW_KEY_NODE_NAME);
+	if (const auto props = lib().stream_get_properties(m_stream)) {
+		return lib().properties_get(props, PW_KEY_NODE_NAME);
 	}
 
 	return nullptr;
@@ -471,7 +469,7 @@ ErrorCode Flux::nameSet(const char *name) {
 
 	const auto lock = m_engine.locker();
 
-	return lib.stream_update_properties(m_stream, &dict) >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
+	return lib().stream_update_properties(m_stream, &dict) >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
 }
 
 NodeInfoData::NodeInfoData(Engine &engine, const uint32_t id)
@@ -479,7 +477,7 @@ NodeInfoData::NodeInfoData(Engine &engine, const uint32_t id)
 	  m_proxy(static_cast< pw_proxy * >(pw_registry_bind(engine.m_registry, id, NODE_TYPE_ID, PW_VERSION_NODE, 0))),
 	  m_listener() {
 	if (m_proxy) {
-		lib.proxy_add_object_listener(m_proxy, &m_listener, &eventsNode, this);
+		lib().proxy_add_object_listener(m_proxy, &m_listener, &eventsNode, this);
 	}
 }
 
@@ -487,14 +485,14 @@ NodeInfoData::~NodeInfoData() {
 	spa_hook_remove(&m_listener);
 
 	if (m_proxy) {
-		lib.proxy_destroy(m_proxy);
+		lib().proxy_destroy(m_proxy);
 	}
 }
 
 static void processInput(void *userData) {
 	auto &flux = *static_cast< Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
+	pw_buffer *buf = lib().stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {
 		return;
 	}
@@ -508,13 +506,13 @@ static void processInput(void *userData) {
 
 	flux.m_feedback.process(flux.m_feedback.userData, &fluxData);
 
-	lib.stream_queue_buffer(flux.m_stream, buf);
+	lib().stream_queue_buffer(flux.m_stream, buf);
 }
 
 static void processOutput(void *userData) {
 	auto &flux = *static_cast< Flux * >(userData);
 
-	pw_buffer *buf = lib.stream_dequeue_buffer(flux.m_stream);
+	pw_buffer *buf = lib().stream_dequeue_buffer(flux.m_stream);
 	if (!buf) {
 		return;
 	}
@@ -539,7 +537,7 @@ static void processOutput(void *userData) {
 
 	data->chunk->stride = flux.m_frameSize;
 
-	lib.stream_queue_buffer(flux.m_stream, buf);
+	lib().stream_queue_buffer(flux.m_stream, buf);
 }
 
 static constexpr spa_audio_info_raw configToInfo(const FluxConfig &config) {

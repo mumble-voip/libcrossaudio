@@ -21,15 +21,15 @@ struct pw_thread_loop;
 namespace pipewire {
 class Library {
 public:
-	Library();
-	~Library();
+	static Library &instance() {
+		static Library instance;
+		return instance;
+	}
 
 	explicit operator bool() const { return m_handle; }
 
 	ErrorCode load(const std::string_view libraryName);
 	void unload();
-
-	void *m_handle;
 
 	const char *(*get_library_version)();
 
@@ -73,9 +73,18 @@ public:
 	pw_loop *(*thread_loop_get_loop)(pw_thread_loop *loop);
 
 private:
+	Library();
+	~Library();
+
 	Library(const Library &)            = delete;
 	Library &operator=(const Library &) = delete;
+
+	void *m_handle;
 };
+
+static inline auto &lib() {
+	return Library::instance();
+}
 } // namespace pipewire
 
 #endif
