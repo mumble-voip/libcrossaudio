@@ -6,8 +6,6 @@
 #ifndef CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_HPP
 #define CROSSAUDIO_SRC_BACKENDS_PIPEWIRE_PIPEWIRE_HPP
 
-#include "Library.hpp"
-
 #include "Backend.h"
 
 #include "crossaudio/Direction.h"
@@ -16,6 +14,7 @@
 #include "crossaudio/Node.h"
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include <spa/param/audio/raw.h>
@@ -27,10 +26,15 @@ using FluxFeedback = CrossAudio_FluxFeedback;
 using Direction = CrossAudio_Direction;
 using Nodes     = CrossAudio_Nodes;
 
+struct pw_context;
+struct pw_core;
 struct pw_node_info;
-struct spa_audio_info_raw;
+struct pw_stream;
+struct pw_thread_loop;
 
 namespace pipewire {
+class EventManager;
+
 class Engine {
 public:
 	class Locker {
@@ -66,18 +70,18 @@ public:
 	ErrorCode start();
 	ErrorCode stop();
 
-	void addNode(const pw_node_info *info);
-	void removeNode(const uint32_t id);
-
 	pw_thread_loop *m_threadLoop;
 	pw_context *m_context;
 	pw_core *m_core;
-	pw_registry *m_registry;
-	spa_hook m_registryListener;
+
+	std::unique_ptr< EventManager > m_eventManager;
 
 private:
 	Engine(const Engine &)            = delete;
 	Engine &operator=(const Engine &) = delete;
+
+	void addNode(const pw_node_info *info);
+	void removeNode(uint32_t id);
 
 	std::map< uint32_t, Node > m_nodes;
 };
@@ -105,21 +109,6 @@ public:
 private:
 	Flux(const Flux &)            = delete;
 	Flux &operator=(const Flux &) = delete;
-};
-
-class NodeInfoData {
-public:
-	NodeInfoData(Engine &engine, const uint32_t id);
-	~NodeInfoData();
-
-	constexpr explicit operator bool() { return m_proxy; }
-
-	constexpr Engine &engine() { return m_engine; }
-
-private:
-	Engine &m_engine;
-	pw_proxy *m_proxy;
-	spa_hook m_listener;
 };
 } // namespace pipewire
 

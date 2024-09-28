@@ -37,6 +37,8 @@ target_include_directories(be_pipewire
 
 target_sources(be_pipewire
 	PRIVATE
+		"EventManager.cpp"
+		"EventManager.hpp"
 		"Library.cpp"
 		"Library.hpp"
 		"PipeWire.cpp"

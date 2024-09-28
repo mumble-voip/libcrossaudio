@@ -5,6 +5,9 @@
 
 #include "PipeWire.hpp"
 
+#include "EventManager.hpp"
+#include "Library.hpp"
+
 #include "Node.h"
 
 #include "crossaudio/Macros.h"
@@ -177,31 +180,6 @@ constexpr BE_Impl PipeWire_Impl = {
 };
 // clang-format on
 
-static constexpr auto NODE_TYPE_ID = "PipeWire:Interface:Node";
-
-static constexpr pw_registry_events eventsRegistry = {
-	PW_VERSION_REGISTRY_EVENTS,
-	[](void *userData, const uint32_t id, const uint32_t /*permissions*/, const char *type, const uint32_t /*version*/,
-	   const spa_dict * /*props*/) {
-		if (spa_streq(type, NODE_TYPE_ID)) {
-			auto &engine = *static_cast< Engine * >(userData);
-
-			new NodeInfoData(engine, id);
-		}
-	},
-	[](void *userData, const uint32_t id) { static_cast< Engine * >(userData)->removeNode(id); }
-};
-
-static constexpr pw_node_events eventsNode = { PW_VERSION_NODE_EVENTS,
-											   [](void *userData, const pw_node_info *info) {
-												   auto data = static_cast< NodeInfoData*                   >(userData);
-
-												   data->engine().addNode(info);
-
-												   delete data;
-											   },
-											   nullptr };
-
 Engine::Engine() : m_threadLoop(nullptr), m_context(nullptr), m_core(nullptr) {
 	if ((m_threadLoop = lib().thread_loop_new(nullptr, nullptr))) {
 		m_context = lib().context_new(lib().thread_loop_get_loop(m_threadLoop), nullptr, 0);
@@ -234,6 +212,9 @@ void Engine::unlock() {
 }
 
 ErrorCode Engine::start() {
+	const EventManager::Feedback eventManagerFeedback{ .nodeAdded = [this](const pw_node_info *info) { addNode(info); },
+													   .nodeRemoved = [this](const uint32_t id) { removeNode(id); } };
+
 	if (m_core) {
 		return CROSSAUDIO_EC_INIT;
 	}
@@ -242,8 +223,7 @@ ErrorCode Engine::start() {
 		return CROSSAUDIO_EC_CONNECT;
 	}
 
-	m_registry = pw_core_get_registry(m_core, PW_VERSION_REGISTRY, 0);
-	pw_registry_add_listener(m_registry, &m_registryListener, &eventsRegistry, this);
+	m_eventManager = std::make_unique< EventManager >(m_core, eventManagerFeedback);
 
 	if (lib().thread_loop_start(m_threadLoop) < 0) {
 		stop();
@@ -256,13 +236,9 @@ ErrorCode Engine::start() {
 ErrorCode Engine::stop() {
 	lock();
 
-	spa_hook_remove(&m_registryListener);
+	m_eventManager.reset();
 
 	m_nodes.clear();
-
-	if (m_registry) {
-		lib().proxy_destroy(reinterpret_cast< pw_proxy * >(m_registry));
-	}
 
 	if (m_core) {
 		lib().core_disconnect(m_core);
@@ -470,23 +446,6 @@ ErrorCode Flux::nameSet(const char *name) {
 	const auto lock = m_engine.locker();
 
 	return lib().stream_update_properties(m_stream, &dict) >= 1 ? CROSSAUDIO_EC_OK : CROSSAUDIO_EC_GENERIC;
-}
-
-NodeInfoData::NodeInfoData(Engine &engine, const uint32_t id)
-	: m_engine(engine),
-	  m_proxy(static_cast< pw_proxy * >(pw_registry_bind(engine.m_registry, id, NODE_TYPE_ID, PW_VERSION_NODE, 0))),
-	  m_listener() {
-	if (m_proxy) {
-		lib().proxy_add_object_listener(m_proxy, &m_listener, &eventsNode, this);
-	}
-}
-
-NodeInfoData::~NodeInfoData() {
-	spa_hook_remove(&m_listener);
-
-	if (m_proxy) {
-		lib().proxy_destroy(m_proxy);
-	}
 }
 
 static void processInput(void *userData) {
