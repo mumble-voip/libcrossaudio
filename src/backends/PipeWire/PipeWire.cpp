@@ -96,8 +96,8 @@ static ErrorCode engineFree(BE_Engine *engine) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *) {
-	return toImpl(engine)->start();
+static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *feedback) {
+	return toImpl(engine)->start(feedback ? *feedback : EngineFeedback());
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
@@ -211,9 +211,11 @@ void Engine::unlock() {
 	}
 }
 
-ErrorCode Engine::start() {
-	const EventManager::Feedback eventManagerFeedback{ .nodeAdded = [this](const pw_node_info *info) { addNode(info); },
-													   .nodeRemoved = [this](const uint32_t id) { removeNode(id); } };
+ErrorCode Engine::start(const EngineFeedback &feedback) {
+	const EventManager::Feedback eventManagerFeedback{ .nodeAdded = [this](const uint32_t id) { addNode(id); },
+													   .nodeRemoved = [this](const uint32_t id) { removeNode(id); },
+													   .nodeUpdated =
+														   [this](const pw_node_info *info) { updateNode(info); } };
 
 	if (m_core) {
 		return CROSSAUDIO_EC_INIT;
@@ -223,6 +225,7 @@ ErrorCode Engine::start() {
 		return CROSSAUDIO_EC_CONNECT;
 	}
 
+	m_feedback     = feedback;
 	m_eventManager = std::make_unique< EventManager >(m_core, eventManagerFeedback);
 
 	if (lib().thread_loop_start(m_threadLoop) < 0) {
@@ -285,7 +288,11 @@ Nodes *Engine::engineNodesGet() {
 
 	for (const auto &iter : m_nodes) {
 		const auto &nodeIn = iter.second;
-		auto &nodeOut      = nodes->items[i++];
+		if (!nodeIn.advertised) {
+			continue;
+		}
+
+		auto &nodeOut = nodes->items[i++];
 
 		nodeOut.id        = strdup(nodeIn.id.data());
 		nodeOut.name      = strdup(nodeIn.name.data());
@@ -295,17 +302,59 @@ Nodes *Engine::engineNodesGet() {
 	return nodes;
 }
 
-void Engine::addNode(const pw_node_info *info) {
-	const spa_dict *props = info->props;
+void Engine::addNode(const uint32_t id) {
+	lock();
+	m_nodes.try_emplace(id, Node());
+	unlock();
+}
 
-	const char *id = spa_dict_lookup(props, PW_KEY_NODE_NAME);
-	if (!id) {
+void Engine::removeNode(const uint32_t id) {
+	lock();
+	const auto iter = m_nodes.extract(id);
+	unlock();
+
+	if (!iter.empty() && m_feedback.nodeRemoved) {
+		const Node &node  = iter.mapped();
+		::Node *nodeNotif = nodeNew();
+
+		nodeNotif->id        = strdup(node.id.data());
+		nodeNotif->name      = strdup(node.name.data());
+		nodeNotif->direction = node.direction;
+
+		m_feedback.nodeRemoved(m_feedback.userData, nodeNotif);
+	}
+}
+
+void Engine::updateNode(const pw_node_info *info) {
+	const auto lock = locker();
+
+	const auto iter = m_nodes.find(info->id);
+	if (iter == m_nodes.cend()) {
 		return;
 	}
 
-	const char *name = spa_dict_lookup(props, PW_KEY_NODE_DESCRIPTION);
-	if (!name) {
-		name = id;
+	auto &node = iter->second;
+	if (node.advertised) {
+		return;
+	}
+
+	if (node.id.empty()) {
+		const char *id = spa_dict_lookup(info->props, PW_KEY_NODE_NAME);
+		if (id) {
+			node.id = id;
+		}
+	}
+
+	if (node.name.empty()) {
+		const char *name = spa_dict_lookup(info->props, PW_KEY_NODE_DESCRIPTION);
+		if (name) {
+			node.name = name;
+		}
+	}
+
+	if (!(info->n_input_ports || info->n_output_ports) || node.id.empty()) {
+		// Don't advertise the node if it has no ports or ID.
+		return;
 	}
 
 	uint8_t direction = CROSSAUDIO_DIR_NONE;
@@ -316,15 +365,19 @@ void Engine::addNode(const pw_node_info *info) {
 		direction |= CROSSAUDIO_DIR_IN;
 	}
 
-	const auto lock = locker();
+	node.direction = static_cast< Direction >(direction);
 
-	m_nodes.emplace(info->id, Node(id, name, static_cast< Direction >(direction)));
-}
+	if (m_feedback.nodeAdded) {
+		::Node *nodeNotif = nodeNew();
 
-void Engine::removeNode(const uint32_t id) {
-	const auto lock = locker();
+		nodeNotif->id        = strdup(node.id.data());
+		nodeNotif->name      = strdup(node.name.data());
+		nodeNotif->direction = node.direction;
 
-	m_nodes.erase(id);
+		m_feedback.nodeAdded(m_feedback.userData, nodeNotif);
+
+		node.advertised = true;
+	}
 }
 
 static constexpr pw_stream_events eventsInput  = { PW_VERSION_STREAM_EVENTS,

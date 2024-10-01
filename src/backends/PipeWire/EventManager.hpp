@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <unordered_map>
 
 #include <spa/utils/hook.h>
 
@@ -20,15 +21,32 @@ namespace pipewire {
 class EventManager {
 public:
 	struct Feedback {
-		std::function< void(const pw_node_info *info) > nodeAdded;
+		std::function< void(uint32_t id) > nodeAdded;
 		std::function< void(uint32_t id) > nodeRemoved;
+		std::function< void(const pw_node_info *info) > nodeUpdated;
+	};
+
+	class Node {
+	public:
+		Node(uint32_t id, EventManager &manager);
+		~Node();
+
+	private:
+		Node(const Node &)            = delete;
+		Node &operator=(const Node &) = delete;
+
+		pw_proxy *m_proxy;
+		spa_hook m_listener;
 	};
 
 	EventManager(pw_core *core, const Feedback &feedback);
 	~EventManager();
 
-	constexpr auto &feedback() { return m_feedback; }
 	constexpr auto registry() { return m_registry; }
+
+	void addNode(uint32_t id);
+	void removeNode(uint32_t id);
+	void updateNode(const pw_node_info *info);
 
 private:
 	EventManager(const EventManager &)            = delete;
@@ -36,20 +54,8 @@ private:
 
 	Feedback m_feedback;
 	pw_registry *m_registry;
-	spa_hook m_registryListener;
-};
-
-class NodeInfoData {
-public:
-	NodeInfoData(EventManager &manager, const uint32_t id);
-	~NodeInfoData();
-
-	constexpr auto &manager() { return m_manager; }
-
-private:
-	EventManager &m_manager;
-	pw_proxy *m_proxy;
 	spa_hook m_listener;
+	std::unordered_map< uint32_t, Node > m_nodes;
 };
 } // namespace pipewire
 

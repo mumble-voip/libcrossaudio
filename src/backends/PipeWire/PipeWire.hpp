@@ -9,6 +9,7 @@
 #include "Backend.h"
 
 #include "crossaudio/Direction.h"
+#include "crossaudio/Engine.h"
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
 #include "crossaudio/Node.h"
@@ -50,6 +51,7 @@ public:
 		std::string id;
 		std::string name;
 		Direction direction;
+		bool advertised;
 	};
 
 	Engine();
@@ -67,7 +69,7 @@ public:
 
 	Nodes *engineNodesGet();
 
-	ErrorCode start();
+	ErrorCode start(const EngineFeedback &feedback);
 	ErrorCode stop();
 
 	pw_thread_loop *m_threadLoop;
@@ -80,9 +82,11 @@ private:
 	Engine(const Engine &)            = delete;
 	Engine &operator=(const Engine &) = delete;
 
-	void addNode(const pw_node_info *info);
+	void addNode(uint32_t id);
 	void removeNode(uint32_t id);
+	void updateNode(const pw_node_info *info);
 
+	EngineFeedback m_feedback;
 	std::map< uint32_t, Node > m_nodes;
 };
 
