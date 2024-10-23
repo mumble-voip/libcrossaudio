@@ -76,8 +76,8 @@ static ErrorCode engineFree(BE_Engine *engine) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *) {
-	return toImpl(engine)->start();
+static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *feedback) {
+	return toImpl(engine)->start(feedback ? *feedback : EngineFeedback());
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
@@ -190,7 +190,7 @@ void Engine::unlock() {
 	}
 }
 
-ErrorCode Engine::start() {
+ErrorCode Engine::start(const EngineFeedback &feedback) {
 	switch (lib().context_get_state(m_context)) {
 		case PA_CONTEXT_UNCONNECTED:
 		case PA_CONTEXT_FAILED:
@@ -199,6 +199,8 @@ ErrorCode Engine::start() {
 		default:
 			return CROSSAUDIO_EC_INIT;
 	}
+
+	m_feedback = feedback;
 
 	lib().context_set_state_callback(m_context, contextState, this);
 	lib().context_set_subscribe_callback(m_context, contextEvent, this);
@@ -288,6 +290,57 @@ void Engine::fixNameIfMonitor(std::string &name) {
 	}
 }
 
+void Engine::addNode(const uint32_t index, const char *name, const char *description, Direction direction,
+					 const char *monitorName) {
+	{
+		std::unique_lock lock(m_nodesLock);
+
+		if (monitorName) {
+			direction = CROSSAUDIO_DIR_BOTH;
+			m_nodeMonitors.emplace(name, monitorName);
+		}
+
+		m_nodes.emplace(index, Node(name, description, direction));
+	}
+
+	if (m_feedback.nodeAdded) {
+		::Node *nodeNotif = nodeNew();
+
+		nodeNotif->id        = strdup(name);
+		nodeNotif->name      = strdup(description);
+		nodeNotif->direction = direction;
+
+		m_feedback.nodeAdded(m_feedback.userData, nodeNotif);
+	}
+}
+
+void Engine::removeNode(const uint32_t index) {
+	m_nodesLock.lock();
+
+	const auto iter = m_nodes.extract(index);
+	if (iter.empty()) {
+		m_nodesLock.unlock();
+		return;
+	}
+
+	const Node &node = iter.mapped();
+	if (node.direction == CROSSAUDIO_DIR_BOTH) {
+		m_nodeMonitors.erase(node.name);
+	}
+
+	m_nodesLock.unlock();
+
+	if (m_feedback.nodeRemoved) {
+		::Node *nodeNotif = nodeNew();
+
+		nodeNotif->id        = strdup(node.name.data());
+		nodeNotif->name      = strdup(node.description.data());
+		nodeNotif->direction = node.direction;
+
+		m_feedback.nodeRemoved(m_feedback.userData, nodeNotif);
+	}
+}
+
 void Engine::serverInfo(pa_context *, const pa_server_info *info, void *userData) {
 	auto &engine = *static_cast< Engine * >(userData);
 
@@ -304,16 +357,7 @@ void Engine::sinkInfo(pa_context *, const pa_sink_info *info, const int eol, voi
 
 	auto &engine = *static_cast< Engine * >(userData);
 
-	const std::unique_lock lock(engine.m_nodesLock);
-
-	auto direction = CROSSAUDIO_DIR_OUT;
-
-	if (info->monitor_source != PA_INVALID_INDEX) {
-		direction = CROSSAUDIO_DIR_BOTH;
-		engine.m_nodeMonitors.emplace(info->name, info->monitor_source_name);
-	}
-
-	engine.m_nodes.emplace(info->index, Node(info->name, info->description, direction));
+	engine.addNode(info->index, info->name, info->description, CROSSAUDIO_DIR_OUT, info->monitor_source_name);
 }
 
 void Engine::sourceInfo(pa_context *, const pa_source_info *info, const int eol, void *userData) {
@@ -323,64 +367,29 @@ void Engine::sourceInfo(pa_context *, const pa_source_info *info, const int eol,
 
 	auto &engine = *static_cast< Engine * >(userData);
 
-	const std::unique_lock lock(engine.m_nodesLock);
-
-	engine.m_nodes.emplace(info->index, Node(info->name, info->description, CROSSAUDIO_DIR_IN));
+	engine.addNode(info->index, info->name, info->description, CROSSAUDIO_DIR_IN, nullptr);
 }
 
 void Engine::contextEvent(pa_context *context, pa_subscription_event_type_t type, unsigned int index, void *userData) {
 	auto &engine = *static_cast< Engine * >(userData);
 
-	bool source;
-	switch (type & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) {
-		case PA_SUBSCRIPTION_EVENT_SINK:
-			source = false;
-			break;
-		case PA_SUBSCRIPTION_EVENT_SOURCE:
-			source = true;
-			break;
-		default:
-			return;
-	}
-
-	bool add;
 	switch (type & PA_SUBSCRIPTION_EVENT_TYPE_MASK) {
 		case PA_SUBSCRIPTION_EVENT_NEW:
-			add = true;
 			break;
 		case PA_SUBSCRIPTION_EVENT_REMOVE:
-			add = false;
-			break;
+			engine.removeNode(index);
+			[[fallthrough]];
 		default:
 			return;
 	}
 
-	if (add) {
-		if (source) {
-			lib().operation_unref(lib().context_get_source_info_by_index(context, index, sourceInfo, userData));
-		} else {
+	switch (type & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) {
+		case PA_SUBSCRIPTION_EVENT_SINK:
 			lib().operation_unref(lib().context_get_sink_info_by_index(context, index, sinkInfo, userData));
-		}
-	} else {
-		std::unique_lock lock(engine.m_nodesLock);
-
-		auto &nodes = engine.m_nodes;
-
-		const auto iter = nodes.find(index);
-		if (iter == nodes.cend()) {
-			return;
-		}
-
-		if (source) {
-			nodes.erase(iter);
-		} else {
-			auto &monitors = engine.m_nodeMonitors;
-
-			const auto node = nodes.extract(iter);
-			if (const auto monitorIter = monitors.find(node.mapped().name); monitorIter != monitors.cend()) {
-				engine.m_nodeMonitors.erase(monitorIter);
-			}
-		}
+			break;
+		case PA_SUBSCRIPTION_EVENT_SOURCE:
+			lib().operation_unref(lib().context_get_source_info_by_index(context, index, sourceInfo, userData));
+			break;
 	}
 }
 

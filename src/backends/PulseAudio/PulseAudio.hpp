@@ -11,6 +11,7 @@
 #include "Backend.h"
 
 #include "crossaudio/Direction.h"
+#include "crossaudio/Engine.h"
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
 #include "crossaudio/Node.h"
@@ -63,7 +64,7 @@ public:
 
 	Nodes *engineNodesGet();
 
-	ErrorCode start();
+	ErrorCode start(const EngineFeedback &feedback);
 	ErrorCode stop();
 
 	std::string defaultInName();
@@ -76,6 +77,10 @@ private:
 	Engine(const Engine &)            = delete;
 	Engine &operator=(const Engine &) = delete;
 
+	void addNode(uint32_t index, const char *name, const char *description, Direction direction,
+				 const char *monitorName);
+	void removeNode(uint32_t index);
+
 	static void serverInfo(pa_context *context, const pa_server_info *info, void *userData);
 	static void sinkInfo(pa_context *context, const pa_sink_info *info, int eol, void *userData);
 	static void sourceInfo(pa_context *context, const pa_source_info *info, int eol, void *userData);
@@ -83,6 +88,8 @@ private:
 	static void contextEvent(pa_context *context, pa_subscription_event_type_t type, unsigned int index,
 							 void *userData);
 	static void contextState(pa_context *context, void *userData);
+
+	EngineFeedback m_feedback;
 
 	std::atomic_flag m_connectComplete;
 	pa_threaded_mainloop *m_threadLoop;
