@@ -6,6 +6,7 @@
 #ifndef CROSSAUDIO_SRC_BACKENDS_WASAPI_WASAPI_HPP
 #define CROSSAUDIO_SRC_BACKENDS_WASAPI_WASAPI_HPP
 
+#include "crossaudio/Engine.h"
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
 #include "crossaudio/Node.h"
@@ -13,6 +14,8 @@
 #include <atomic>
 #include <memory>
 #include <string>
+
+typedef CrossAudio_EngineFeedback EngineFeedback;
 
 typedef CrossAudio_FluxConfig FluxConfig;
 typedef CrossAudio_FluxFeedback FluxFeedback;
@@ -31,6 +34,8 @@ struct IMMDevice;
 struct IMMDeviceEnumerator;
 
 namespace wasapi {
+class EventManager;
+
 class Engine {
 public:
 	struct SessionID {
@@ -50,7 +55,7 @@ public:
 
 	Nodes *engineNodesGet();
 
-	ErrorCode start();
+	ErrorCode start(const EngineFeedback &feedback);
 	ErrorCode stop();
 
 	std::string m_name;
@@ -60,6 +65,9 @@ public:
 private:
 	Engine(const Engine &)            = delete;
 	Engine &operator=(const Engine &) = delete;
+
+	EngineFeedback m_feedback;
+	std::unique_ptr< EventManager > m_eventManager;
 };
 
 class Flux {
@@ -100,10 +108,5 @@ private:
 extern "C" {
 extern const BE_Impl WASAPI_Impl;
 }
-
-// Internal functions
-
-static char *utf16To8(const wchar_t *utf16);
-static wchar_t *utf8To16(const char *utf8);
 
 #endif

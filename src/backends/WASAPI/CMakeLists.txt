@@ -22,6 +22,10 @@ target_include_directories(be_wasapi
 
 target_sources(be_wasapi
 	PRIVATE
+		"Device.cpp"
+		"Device.hpp"
+		"EventManager.cpp"
+		"EventManager.hpp"
 		"WASAPI.cpp"
 		"WASAPI.hpp"
 )

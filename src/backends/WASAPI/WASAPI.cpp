@@ -5,6 +5,9 @@
 
 #include "WASAPI.hpp"
 
+#include "Device.hpp"
+#include "EventManager.hpp"
+
 #include "Backend.h"
 #include "Node.h"
 
@@ -18,7 +21,6 @@
 
 #include <audioclient.h>
 #include <avrt.h>
-#include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
 
 using namespace wasapi;
@@ -114,8 +116,8 @@ static ErrorCode engineFree(BE_Engine *engine) {
 	return CROSSAUDIO_EC_OK;
 }
 
-static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *) {
-	return toImpl(engine)->start();
+static ErrorCode engineStart(BE_Engine *engine, const EngineFeedback *feedback) {
+	return toImpl(engine)->start(feedback ? *feedback : EngineFeedback());
 }
 
 static ErrorCode engineStop(BE_Engine *engine) {
@@ -211,11 +213,22 @@ Engine::~Engine() {
 	}
 }
 
-ErrorCode Engine::start() {
+ErrorCode Engine::start(const EngineFeedback &feedback) {
+	m_feedback = feedback;
+
+	const EventManager::Feedback eventManagerFeedback{
+		.nodeAdded = [this](Node *node) { m_feedback.nodeAdded(m_feedback.userData, node); },
+		.nodeRemoved = [this](Node *node) { m_feedback.nodeRemoved(m_feedback.userData, node); }
+	};
+
+	m_eventManager = std::make_unique< EventManager >(m_enumerator, eventManagerFeedback);
+
 	return CROSSAUDIO_EC_OK;
 }
 
 ErrorCode Engine::stop() {
+	m_eventManager.reset();
+
 	return CROSSAUDIO_EC_OK;
 }
 
@@ -246,50 +259,8 @@ Nodes *Engine::engineNodesGet() {
 			continue;
 		}
 
-		IPropertyStore *store;
-		if (device->OpenPropertyStore(STGM_READ, &store) != S_OK) {
-			device->Release();
-			continue;
-		}
+		populateNode(nodes->items[i], *device, nullptr);
 
-		LPWSTR id;
-		if (device->GetId(&id) == S_OK) {
-			auto &node = nodes->items[i];
-
-			IMMEndpoint *endpoint;
-			if (device->QueryInterface(__uuidof(IMMEndpoint), reinterpret_cast< void ** >(&endpoint)) == S_OK) {
-				EDataFlow dataflow;
-				if (endpoint->GetDataFlow(&dataflow) == S_OK) {
-					switch (dataflow) {
-						case eRender:
-							node.direction = CROSSAUDIO_DIR_OUT;
-							break;
-						case eCapture:
-							node.direction = CROSSAUDIO_DIR_IN;
-							break;
-						case eAll:
-							node.direction = CROSSAUDIO_DIR_BOTH;
-							break;
-						default:
-							node.direction = CROSSAUDIO_DIR_NONE;
-							break;
-					}
-				}
-
-				endpoint->Release();
-			}
-
-			node.id = utf16To8(id);
-			CoTaskMemFree(id);
-
-			PROPVARIANT varName{};
-			if (store->GetValue(PKEY_Device_FriendlyName, &varName) == S_OK) {
-				node.name = utf16To8(varName.pwszVal);
-				PropVariantClear(&varName);
-			}
-		}
-
-		store->Release();
 		device->Release();
 	}
 
@@ -593,32 +564,6 @@ cleanup:
 	}
 
 	deinit();
-}
-
-static char *utf16To8(const wchar_t *utf16) {
-	const auto utf16Size = static_cast< int >(wcslen(utf16) + 1);
-
-	const auto utf8Size = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16Size, nullptr, 0, nullptr, nullptr);
-	auto utf8           = static_cast< char           *>(malloc(utf8Size));
-	if (WideCharToMultiByte(CP_UTF8, 0, utf16, utf16Size, utf8, utf8Size, nullptr, nullptr) <= 0) {
-		free(utf8);
-		return nullptr;
-	}
-
-	return utf8;
-}
-
-static wchar_t *utf8To16(const char *utf8) {
-	const auto utf8Size = static_cast< int >(strlen(utf8) + 1);
-
-	const int utf16Size = sizeof(wchar_t) * MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, nullptr, 0);
-	auto utf16          = static_cast< wchar_t          *>(malloc(utf16Size));
-	if (MultiByteToWideChar(CP_UTF8, 0, utf8, utf8Size, utf16, utf16Size / sizeof(wchar_t)) <= 0) {
-		free(utf16);
-		return nullptr;
-	}
-
-	return utf16;
 }
 
 static constexpr WAVEFORMATEXTENSIBLE configToWaveFormat(const FluxConfig &config) {
