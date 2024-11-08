@@ -17,7 +17,7 @@
 enum Key { KEY_NONE, KEY_BREAK, KEY_PAUSE };
 
 #if !defined(OS_WINDOWS)
-static int getch(void) {
+static int _getch(void) {
 	struct termios oldAttr;
 	tcgetattr(STDIN_FILENO, &oldAttr);
 	struct termios newAttr = oldAttr;
@@ -31,7 +31,7 @@ static int getch(void) {
 #endif
 
 static inline enum Key getKey(void) {
-	switch (getch()) {
+	switch (_getch()) {
 		case '\n':
 		case '\r':
 			return KEY_BREAK;
