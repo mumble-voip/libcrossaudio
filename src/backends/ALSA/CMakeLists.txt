@@ -26,6 +26,12 @@ target_sources(be_alsa
 	PRIVATE
 		"ALSA.cpp"
 		"ALSA.hpp"
+
+		"Engine.cpp"
+		"Engine.hpp"
+
+		"Flux.cpp"
+		"Flux.hpp"
 )
 
 target_link_libraries(be_alsa
