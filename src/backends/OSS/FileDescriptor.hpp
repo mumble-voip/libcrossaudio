@@ -6,6 +6,7 @@
 #ifndef CROSSAUDIO_SRC_BACKENDS_OSS_FILEDESCRIPTOR_HPP
 #define CROSSAUDIO_SRC_BACKENDS_OSS_FILEDESCRIPTOR_HPP
 
+namespace oss {
 class FileDescriptor {
 public:
 	using fd_t = int;
@@ -23,8 +24,9 @@ public:
 
 	void close();
 
-private:
+protected:
 	fd_t m_handle;
 };
+} // namespace oss
 
 #endif

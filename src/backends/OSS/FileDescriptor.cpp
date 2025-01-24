@@ -9,6 +9,8 @@
 
 #include <unistd.h>
 
+using namespace oss;
+
 FileDescriptor::FileDescriptor() : m_handle(-1) {
 }
 

@@ -37,10 +37,20 @@ endif()
 
 target_sources(be_oss
 	PRIVATE
-		"FileDescriptor.cpp"
-		"FileDescriptor.hpp"
 		"OSS.cpp"
 		"OSS.hpp"
+
+		"Engine.cpp"
+		"Engine.hpp"
+
+		"Flux.cpp"
+		"Flux.hpp"
+
+		"FileDescriptor.cpp"
+		"FileDescriptor.hpp"
+
+		"Mixer.cpp"
+		"Mixer.hpp"
 )
 
 target_link_libraries(be_oss
