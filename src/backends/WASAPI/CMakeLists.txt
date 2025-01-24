@@ -22,12 +22,20 @@ target_include_directories(be_wasapi
 
 target_sources(be_wasapi
 	PRIVATE
-		"Device.cpp"
-		"Device.hpp"
-		"EventManager.cpp"
-		"EventManager.hpp"
 		"WASAPI.cpp"
 		"WASAPI.hpp"
+
+		"Engine.cpp"
+		"Engine.hpp"
+
+		"Flux.cpp"
+		"Flux.hpp"
+
+		"Device.cpp"
+		"Device.hpp"
+
+		"EventManager.cpp"
+		"EventManager.hpp"
 )
 
 target_link_libraries(be_wasapi
