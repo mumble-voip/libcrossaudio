@@ -1,0 +1,21 @@
+// Copyright The Mumble Developers. All rights reserved.
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file at the root of the
+// Mumble source tree or at <https://www.mumble.info/LICENSE>.
+
+#ifndef CROSSAUDIO_SRC_BACKENDS_SNDIO_ENGINE_HPP
+#define CROSSAUDIO_SRC_BACKENDS_SNDIO_ENGINE_HPP
+
+namespace sndio {
+class Engine {
+public:
+	Engine();
+	~Engine();
+
+private:
+	Engine(const Engine &)            = delete;
+	Engine &operator=(const Engine &) = delete;
+};
+} // namespace sndio
+
+#endif

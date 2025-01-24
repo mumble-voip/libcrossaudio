@@ -3,11 +3,12 @@
 // that can be found in the LICENSE file at the root of the
 // Mumble source tree or at <https://www.mumble.info/LICENSE>.
 
-#ifndef CROSSAUDIO_SRC_BACKENDS_SNDIO_SNDIO_HPP
-#define CROSSAUDIO_SRC_BACKENDS_SNDIO_SNDIO_HPP
+#include "Engine.hpp"
 
-struct BE_Impl;
+using namespace sndio;
 
-extern const BE_Impl Sndio_Impl;
+Engine::Engine() {
+}
 
-#endif
+Engine::~Engine() {
+}

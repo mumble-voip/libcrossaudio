@@ -27,8 +27,15 @@ target_include_directories(be_sndio
 
 target_sources(be_sndio
 	PRIVATE
-		"Library.cpp"
-		"Library.hpp"
 		"Sndio.cpp"
 		"Sndio.hpp"
+
+		"Engine.cpp"
+		"Engine.hpp"
+
+		"Flux.cpp"
+		"Flux.hpp"
+
+		"Library.cpp"
+		"Library.hpp"
 )
