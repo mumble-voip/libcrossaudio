@@ -27,8 +27,15 @@ target_include_directories(be_pulseaudio
 
 target_sources(be_pulseaudio
 	PRIVATE
-		"Library.cpp"
-		"Library.hpp"
 		"PulseAudio.cpp"
 		"PulseAudio.hpp"
+
+		"Engine.cpp"
+		"Engine.hpp"
+
+		"Flux.cpp"
+		"Flux.hpp"
+
+		"Library.cpp"
+		"Library.hpp"
 )
