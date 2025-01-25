@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <thread>
 #include <type_traits>
 #include <vector>
 

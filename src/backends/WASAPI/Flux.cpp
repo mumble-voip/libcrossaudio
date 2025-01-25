@@ -11,7 +11,6 @@
 #include <bit>
 #include <cstring>
 #include <functional>
-#include <thread>
 
 #include <Windows.h>
 

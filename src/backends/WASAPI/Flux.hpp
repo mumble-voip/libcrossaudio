@@ -8,13 +8,10 @@
 
 #include <atomic>
 #include <memory>
+#include <thread>
 
 #include "crossaudio/ErrorCode.h"
 #include "crossaudio/Flux.h"
-
-namespace std {
-class thread;
-}
 
 typedef CrossAudio_ErrorCode ErrorCode;
 

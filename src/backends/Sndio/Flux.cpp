@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
-#include <thread>
 #include <vector>
 
 #include <poll.h>

@@ -12,12 +12,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-
-#ifdef __linux__
-namespace std {
-class thread;
-}
-#endif
+#include <thread>
 
 typedef CrossAudio_ErrorCode ErrorCode;
 

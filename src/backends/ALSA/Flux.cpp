@@ -11,7 +11,6 @@
 #include <cstddef>
 #include <cstring>
 #include <functional>
-#include <thread>
 #include <vector>
 
 #include <alsa/asoundlib.h>
